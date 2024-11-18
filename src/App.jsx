@@ -1,6 +1,5 @@
 import React from 'react'
 import CheckInSystem from './components/CheckInSystem'
-import './styles/global.css'
 
 function App() {
   return (
