@@ -23,7 +23,7 @@ const preloadLocation = async () => {
         return null;
     }
 };
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyydfDz0QZuMK5y5ULYAyUAPDMwbHDiJIHUjSEZe3vapgDS_pZU5v2Cay1dZT4-mvd0/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJbvCDCgjd7NDk60v7E5RNVCvssYUGSOjcYaHZoP6vWaOmImvESCmVgQ7tI8PgzpFh/exec';
 const SuccessModal = ({ status, onClose }) => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg p-8 max-w-sm w-full text-center">
@@ -127,9 +127,15 @@ const CheckInSystem = () => {
                 location: `${location.latitude},${location.longitude}`
             };
 
+            console.log('Sending data:', data); // Debug log
+
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
+                cache: 'no-cache',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
                 body: JSON.stringify(data)
             });
 
@@ -142,7 +148,6 @@ const CheckInSystem = () => {
             setIsLoading(false);
         }
     };
-
     const handleModalClose = () => {
         window.close();
         // Fallback if window.close() is blocked
