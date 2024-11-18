@@ -74,24 +74,47 @@ const CheckInSystem = () => {
         try {
             setIsLoading(true);
             setError('');
-            const timestamp = new Date().toISOString();
+
+            // Create timestamp in South African timezone
+            const now = new Date();
+            const saTz = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Africa/Johannesburg',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).format(now);
+
             const data = {
                 staffId,
                 status,
-                timestamp,
+                timestamp: saTz,
                 location: `${location.latitude},${location.longitude}`
             };
 
+            // Log the data we're about to send
+            console.log('Sending data to sheets:', data);
+
             // Send to Google Sheets
-            await fetch(GOOGLE_SCRIPT_URL, {
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify(data),
-                mode: 'no-cors'
+                mode: 'no-cors', // Important for CORS handling
+                cache: 'no-cache',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
+                body: JSON.stringify(data)
             });
 
-            console.log('Data sent:', data);
+            // Since mode is 'no-cors', we can't actually read the response
+            // So we'll assume success if we got here without an error
+            console.log('Data sent successfully');
             setSubmitted(true);
 
+            // Show success message and close
             setTimeout(() => {
                 window.close();
                 document.body.innerHTML = '<div style="text-align: center; padding: 20px;">You can now close this window</div>';
@@ -104,7 +127,6 @@ const CheckInSystem = () => {
             setIsLoading(false);
         }
     };
-
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6">
