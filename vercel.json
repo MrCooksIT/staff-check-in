@@ -1,22 +1,19 @@
 {
     "rewrites": [
         {
-            "source": "/admin",
-            "destination": "/"
-        },
-        {
             "source": "/(.*)",
-            "destination": "/"
+            "destination": "/index.html"
         }
     ],
-    "routes": [
+    "headers": [
         {
-            "src": "/admin",
-            "dest": "/"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/"
+            "source": "/:path*",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-store, no-cache"
+                }
+            ]
         }
     ]
 }

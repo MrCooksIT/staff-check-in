@@ -1,43 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CheckInSystem from './components/CheckInSystem';
 import QRGenerator from './components/QRGenerator';
 
 function App() {
-  const [currentPath, setCurrentPath] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   useEffect(() => {
-    const path = window.location.pathname;
-    console.log('Current path:', path);
-    setCurrentPath(path);
-    setIsAdmin(path === '/admin');
+    const checkPath = () => {
+      const path = window.location.pathname;
+      setShowAdmin(path === '/admin');
+    };
+
+    checkPath();
+    window.addEventListener('popstate', checkPath);
+
+    return () => window.removeEventListener('popstate', checkPath);
   }, []);
 
-  console.log('Rendering App with:', {
-    currentPath,
-    isAdmin,
-    rawPath: window.location.pathname
-  });
+  if (showAdmin) {
+    return <QRGenerator />;
+  }
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      {currentPath === '/admin' ? (
-        <>
-          <div className="p-4 bg-blue-100">
-            <p>Admin Path Detected: {currentPath}</p>
-          </div>
-          <QRGenerator />
-        </>
-      ) : (
-        <>
-          <div className="p-4 bg-green-100">
-            <p>Regular Path Detected: {currentPath}</p>
-          </div>
-          <CheckInSystem />
-        </>
-      )}
-    </div>
-  );
+  return <CheckInSystem />;
 }
 
 export default App;
