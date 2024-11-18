@@ -3,7 +3,6 @@ import CheckInSystem from './components/CheckInSystem';
 import QRGenerator from './components/QRGenerator';
 
 function App() {
-  // Get the current path
   const isAdmin = window.location.pathname === '/admin';
 
   return (
