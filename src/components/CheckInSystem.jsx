@@ -1,145 +1,148 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 const CheckInSystem = () => {
     const [staffId, setStaffId] = useState('');
     const [status, setStatus] = useState('');
     const [location, setLocation] = useState(null);
-    const [success, setSuccess] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState('');
 
-    // Get status from URL parameter (for QR code scanning)
+    // Get status from URL parameter
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const urlStatus = params.get('status');
+        const urlStatus = params.get('status')?.toUpperCase();
         if (urlStatus === 'IN' || urlStatus === 'OUT') {
             setStatus(urlStatus);
+        } else {
+            setError('Invalid access method. Please scan the correct QR code.');
         }
     }, []);
 
-    // Get location
+    // Get location on load
     useEffect(() => {
         if (navigator.geolocation) {
-            setLoading(true);
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     setLocation({
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude
                     });
-                    setLoading(false);
                 },
                 (error) => {
-                    setError('Please enable location access to check in/out');
-                    setLoading(false);
+                    setError('Please enable location services to sign in/out.');
                 }
             );
         }
     }, []);
 
+    const validateStaffId = (id) => {
+        // Add your validation rules here
+        // Example: Must be exactly 4 digits
+        const isValid = /^\d{4}$/.test(id);
+        if (!isValid) {
+            setError('Please enter a valid 4-digit staff ID');
+        } else {
+            setError('');
+        }
+        return isValid;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!validateStaffId(staffId)) return;
         if (!location) {
             setError('Location is required');
             return;
         }
 
         try {
-            setLoading(true);
-            // TODO: Add Google Sheets API connection here
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Here we'll add the Google Sheets connection later
+            const timestamp = new Date().toISOString();
+            const data = {
+                staffId,
+                status,
+                timestamp,
+                location: `${location.latitude},${location.longitude}`
+            };
 
-            setSuccess(true);
-            setStaffId('');
+            console.log('Submitting:', data);
 
-            setTimeout(() => setSuccess(false), 3000);
-        } catch (err) {
+            // Simulate submission
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            setSubmitted(true);
+
+            // Close window after 2 seconds
+            setTimeout(() => {
+                window.close();
+                // Fallback if window.close() is blocked
+                document.body.innerHTML = '<div style="text-align: center; padding: 20px;">You can now close this window</div>';
+            }, 2000);
+
+        } catch (error) {
             setError('Failed to submit. Please try again.');
-        } finally {
-            setLoading(false);
         }
     };
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden">
-                <div className="bg-primary p-6">
-                    <h1 className="text-2xl font-bold text-white text-center">
-                        Staff {status || 'Check-In'} System
-                    </h1>
-                </div>
+    const getButtonColor = () => {
+        return status === 'IN'
+            ? 'bg-green-600 hover:bg-green-700'
+            : 'bg-red-600 hover:bg-red-700';
+    };
 
-                <div className="p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
+    return (
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+            <Card className="w-full max-w-md">
+                <CardContent className="pt-6">
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
+                            <AlertCircle className="w-5 h-5" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    {!submitted && !error && (
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <input
                                 type="number"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
                                 placeholder="Enter Staff ID"
                                 value={staffId}
-                                onChange={(e) => setStaffId(e.target.value)}
+                                onChange={(e) => {
+                                    setStaffId(e.target.value);
+                                    if (e.target.value) validateStaffId(e.target.value);
+                                }}
+                                className="w-full px-4 py-6 text-2xl text-center border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                autoFocus
+                                maxLength="4"
                                 required
-                                className="w-full px-4 py-3 text-lg border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                             />
+
+                            <button
+                                type="submit"
+                                className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${getButtonColor()}`}
+                            >
+                                {`Confirm ${status}`}
+                            </button>
+                        </form>
+                    )}
+
+                    {submitted && (
+                        <div className="py-8 text-center">
+                            <CheckCircle className="mx-auto w-16 h-16 text-green-500 mb-4" />
+                            <p className="text-xl font-semibold text-gray-800">
+                                {status === 'IN' ? 'Signed In' : 'Signed Out'} Successfully
+                            </p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                This window will close automatically
+                            </p>
                         </div>
-
-                        {!status && (
-                            <div className="grid grid-cols-2 gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setStatus('IN')}
-                                    className="p-4 text-lg font-semibold rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors"
-                                >
-                                    Check In
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setStatus('OUT')}
-                                    className="p-4 text-lg font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
-                                >
-                                    Check Out
-                                </button>
-                            </div>
-                        )}
-
-                        {status && (
-                            <div className={`text-center p-4 rounded-lg ${status === 'IN' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                Selected: {status}
-                            </div>
-                        )}
-
-                        {error && (
-                            <div className="flex items-center justify-center text-red-600 gap-2 p-4 bg-red-50 rounded-lg">
-                                <AlertCircle className="w-5 h-5" />
-                                <span>{error}</span>
-                            </div>
-                        )}
-
-                        {success && (
-                            <div className="flex items-center justify-center text-green-600 gap-2 p-4 bg-green-50 rounded-lg">
-                                <CheckCircle className="w-5 h-5" />
-                                <span>Successfully checked {status.toLowerCase()}!</span>
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading || !location || !staffId || !status}
-                            className="w-full p-4 text-lg font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <Loader className="w-5 h-5 animate-spin" />
-                                    Processing...
-                                </span>
-                            ) : (
-                                `Confirm ${status || 'Check-In'}`
-                            )}
-                        </button>
-                    </form>
-                </div>
-            </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 };
