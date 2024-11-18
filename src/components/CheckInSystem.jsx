@@ -43,14 +43,26 @@ const CheckInSystem = () => {
 
     const validateStaffId = (id) => {
         const isValid = /^\d{4}$/.test(id);
-        if (!isValid) {
+        if (!isValid && id.length === 4) {
             setError('Please enter a valid 4-digit staff ID');
         } else {
             setError('');
         }
         return isValid;
     };
-
+    const handleInputChange = (e) => {
+        const value = e.target.value;
+        // Only allow up to 4 digits
+        if (value.length <= 4) {
+            setStaffId(value);
+            // Only validate when 4 digits are entered
+            if (value.length === 4) {
+                validateStaffId(value);
+            } else {
+                setError('');
+            }
+        }
+    };
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateStaffId(staffId)) return;
@@ -111,13 +123,9 @@ const CheckInSystem = () => {
                             pattern="[0-9]*"
                             placeholder="Enter Staff ID"
                             value={staffId}
-                            onChange={(e) => {
-                                setStaffId(e.target.value);
-                                if (e.target.value) validateStaffId(e.target.value);
-                            }}
+                            onChange={handleInputChange}
                             className="w-full px-4 py-6 text-2xl text-center border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             autoFocus
-                            maxLength="4"
                             required
                             disabled={isLoading}
                         />
@@ -126,8 +134,8 @@ const CheckInSystem = () => {
                             type="submit"
                             disabled={isLoading}
                             className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-red-600 hover:bg-red-700'
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : 'bg-red-600 hover:bg-red-700'
                                 } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {isLoading ? (
