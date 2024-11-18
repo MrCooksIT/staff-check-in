@@ -1,8 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxu5M6xlmcuQheN2Vbx6lLPsmmWEexlZerRQHXYj-fD04oX4a2BxVbez0OxdCoqE05_/exec';
-
+const Modal = ({ status, onClose }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg p-8 max-w-sm w-full text-center animate-fade-in">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">
+                {status === 'IN' ? 'Signed In!' : 'Signed Out!'}
+            </h2>
+            <p className="text-gray-600 mb-6">
+                {status === 'IN'
+                    ? 'Welcome to SJMC'
+                    : 'Thank you for your work today'}
+            </p>
+            <button
+                onClick={onClose}
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+                Close
+            </button>
+        </div>
+    </div>
+);
 
 const CheckInSystem = () => {
     const [staffId, setStaffId] = useState('');
@@ -11,58 +30,15 @@ const CheckInSystem = () => {
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
 
+    // ... existing useEffect hooks stay the same ...
 
-    // Get status from URL parameter
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const urlStatus = params.get('status')?.toUpperCase();
-        if (urlStatus === 'IN' || urlStatus === 'OUT') {
-            setStatus(urlStatus);
-        } else {
-            setError('Invalid access method. Please scan the correct QR code.');
-        }
-    }, []);
-
-    // Get location on load
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setLocation({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    });
-                },
-                (error) => {
-                    setError('Please enable location services to sign in/out.');
-                }
-            );
-        }
-    }, []);
-
-    const validateStaffId = (id) => {
-        const isValid = /^\d{4}$/.test(id);
-        if (!isValid && id.length === 4) {
-            setError('Please enter a valid 4-digit staff ID');
-        } else {
-            setError('');
-        }
-        return isValid;
+    const handleModalClose = () => {
+        setShowModal(false);
+        window.close();
     };
-    const handleInputChange = (e) => {
-        const value = e.target.value;
-        // Only allow up to 4 digits
-        if (value.length <= 4) {
-            setStaffId(value);
-            // Only validate when 4 digits are entered
-            if (value.length === 4) {
-                validateStaffId(value);
-            } else {
-                setError('');
-            }
-        }
-    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateStaffId(staffId)) return;
@@ -75,7 +51,6 @@ const CheckInSystem = () => {
             setIsLoading(true);
             setError('');
 
-            // Create timestamp in South African timezone
             const now = new Date();
             const saTz = new Intl.DateTimeFormat('en-US', {
                 timeZone: 'Africa/Johannesburg',
@@ -95,13 +70,10 @@ const CheckInSystem = () => {
                 location: `${location.latitude},${location.longitude}`
             };
 
-            // Log the data we're about to send
-            console.log('Sending data to sheets:', data);
-
             // Send to Google Sheets
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
+            await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Important for CORS handling
+                mode: 'no-cors',
                 cache: 'no-cache',
                 headers: {
                     'Content-Type': 'text/plain;charset=utf-8',
@@ -109,16 +81,8 @@ const CheckInSystem = () => {
                 body: JSON.stringify(data)
             });
 
-            // Since mode is 'no-cors', we can't actually read the response
-            // So we'll assume success if we got here without an error
-            console.log('Data sent successfully');
             setSubmitted(true);
-
-            // Show success message and close
-            setTimeout(() => {
-                window.close();
-                document.body.innerHTML = '<div style="text-align: center; padding: 20px;">You can now close this window</div>';
-            }, 2000);
+            setShowModal(true);
 
         } catch (error) {
             console.error('Submission error:', error);
@@ -127,6 +91,7 @@ const CheckInSystem = () => {
             setIsLoading(false);
         }
     };
+
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6">
@@ -137,7 +102,7 @@ const CheckInSystem = () => {
                     </div>
                 )}
 
-                {!submitted && !error && (
+                {!submitted && (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <input
                             type="number"
@@ -145,9 +110,13 @@ const CheckInSystem = () => {
                             pattern="[0-9]*"
                             placeholder="Enter Staff ID"
                             value={staffId}
-                            onChange={handleInputChange}
+                            onChange={(e) => {
+                                setStaffId(e.target.value);
+                                if (e.target.value) validateStaffId(e.target.value);
+                            }}
                             className="w-full px-4 py-6 text-2xl text-center border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             autoFocus
+                            maxLength="4"
                             required
                             disabled={isLoading}
                         />
@@ -156,8 +125,8 @@ const CheckInSystem = () => {
                             type="submit"
                             disabled={isLoading}
                             className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
-                                ? 'bg-green-600 hover:bg-green-700'
-                                : 'bg-red-600 hover:bg-red-700'
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-red-600 hover:bg-red-700'
                                 } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {isLoading ? (
@@ -172,16 +141,11 @@ const CheckInSystem = () => {
                     </form>
                 )}
 
-                {submitted && (
-                    <div className="py-8 text-center">
-                        <CheckCircle className="mx-auto w-16 h-16 text-green-500 mb-4" />
-                        <p className="text-xl font-semibold text-gray-800">
-                            {status === 'IN' ? 'Signed In' : 'Signed Out'} Successfully
-                        </p>
-                        <p className="text-sm text-gray-500 mt-2">
-                            This window will close automatically
-                        </p>
-                    </div>
+                {showModal && (
+                    <Modal
+                        status={status}
+                        onClose={handleModalClose}
+                    />
                 )}
             </div>
         </div>
