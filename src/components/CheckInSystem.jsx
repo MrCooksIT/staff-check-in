@@ -1,6 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
+// Add this helper at the top of your file, outside the component
+const preloadLocation = async () => {
+    if (!navigator.geolocation) return null;
+
+    try {
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: false, // Faster response
+                timeout: 5000,            // 5 second timeout
+                maximumAge: 300000        // Cache for 5 minutes
+            });
+        });
+
+        return {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+        };
+    } catch (error) {
+        console.warn('Location preload failed:', error);
+        return null;
+    }
+};
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJPm1NFLbNS-rdIrrmQC-Vvw0ZVQfgMxL9GtfFs0kZnXlcU3Ran-XP_CyQxA-icTvy/exec';
 
 const SuccessModal = ({ status, onClose }) => (
@@ -32,34 +54,49 @@ const CheckInSystem = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
-    // Get status from URL and enforce QR code usage
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const urlStatus = params.get('status')?.toUpperCase();
+        let isSubscribed = true; // For cleanup
 
-        if (urlStatus !== 'IN' && urlStatus !== 'OUT') {
-            setError('Please scan the appropriate QR code to sign in or out.');
-            return;
-        }
+        const initialize = async () => {
+            try {
+                // Check QR code status
+                const params = new URLSearchParams(window.location.search);
+                const urlStatus = params.get('status')?.toUpperCase();
 
-        setStatus(urlStatus);
-    }, []);
-
-    // Get location
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setLocation({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    });
-                },
-                () => {
-                    setError('Please enable location services to sign in/out.');
+                if (urlStatus !== 'IN' && urlStatus !== 'OUT') {
+                    throw new Error('Please scan the appropriate QR code to sign in or out.');
                 }
-            );
-        }
+
+                // Set status immediately
+                if (isSubscribed) setStatus(urlStatus);
+
+                // Get location in parallel
+                const locationData = await preloadLocation();
+
+                if (!locationData) {
+                    throw new Error('Please enable location services to sign in/out.');
+                }
+
+                // Only update state if component is still mounted
+                if (isSubscribed) {
+                    setLocation(locationData);
+                    setError(''); // Clear any existing errors
+                }
+
+            } catch (error) {
+                if (isSubscribed) {
+                    setError(error.message);
+                }
+            }
+        };
+
+        // Start initialization
+        initialize();
+
+        // Cleanup function
+        return () => {
+            isSubscribed = false;
+        };
     }, []);
 
     const validateStaffId = (id) => {
@@ -159,8 +196,8 @@ const CheckInSystem = () => {
                         type="submit"
                         disabled={isLoading}
                         className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
-                                ? 'bg-green-600 hover:bg-green-700'
-                                : 'bg-red-600 hover:bg-red-700'
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-red-600 hover:bg-red-700'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {isLoading ? (
