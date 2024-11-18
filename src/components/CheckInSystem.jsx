@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '../components/ui/card';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 const CheckInSystem = () => {
@@ -38,8 +37,6 @@ const CheckInSystem = () => {
     }, []);
 
     const validateStaffId = (id) => {
-        // Add your validation rules here
-        // Example: Must be exactly 4 digits
         const isValid = /^\d{4}$/.test(id);
         if (!isValid) {
             setError('Please enter a valid 4-digit staff ID');
@@ -58,7 +55,6 @@ const CheckInSystem = () => {
         }
 
         try {
-            // Here we'll add the Google Sheets connection later
             const timestamp = new Date().toISOString();
             const data = {
                 staffId,
@@ -68,16 +64,11 @@ const CheckInSystem = () => {
             };
 
             console.log('Submitting:', data);
-
-            // Simulate submission
             await new Promise(resolve => setTimeout(resolve, 500));
-
             setSubmitted(true);
 
-            // Close window after 2 seconds
             setTimeout(() => {
                 window.close();
-                // Fallback if window.close() is blocked
                 document.body.innerHTML = '<div style="text-align: center; padding: 20px;">You can now close this window</div>';
             }, 2000);
 
@@ -86,63 +77,58 @@ const CheckInSystem = () => {
         }
     };
 
-    const getButtonColor = () => {
-        return status === 'IN'
-            ? 'bg-green-600 hover:bg-green-700'
-            : 'bg-red-600 hover:bg-red-700';
-    };
-
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md">
-                <CardContent className="pt-6">
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
-                            <AlertCircle className="w-5 h-5" />
-                            <span>{error}</span>
-                        </div>
-                    )}
+            <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6">
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        <span>{error}</span>
+                    </div>
+                )}
 
-                    {!submitted && !error && (
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <input
-                                type="number"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                placeholder="Enter Staff ID"
-                                value={staffId}
-                                onChange={(e) => {
-                                    setStaffId(e.target.value);
-                                    if (e.target.value) validateStaffId(e.target.value);
-                                }}
-                                className="w-full px-4 py-6 text-2xl text-center border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                autoFocus
-                                maxLength="4"
-                                required
-                            />
+                {!submitted && !error && (
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <input
+                            type="number"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="Enter Staff ID"
+                            value={staffId}
+                            onChange={(e) => {
+                                setStaffId(e.target.value);
+                                if (e.target.value) validateStaffId(e.target.value);
+                            }}
+                            className="w-full px-4 py-6 text-2xl text-center border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            autoFocus
+                            maxLength="4"
+                            required
+                        />
 
-                            <button
-                                type="submit"
-                                className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${getButtonColor()}`}
-                            >
-                                {`Confirm ${status}`}
-                            </button>
-                        </form>
-                    )}
+                        <button
+                            type="submit"
+                            className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-red-600 hover:bg-red-700'
+                                }`}
+                        >
+                            {`Confirm ${status}`}
+                        </button>
+                    </form>
+                )}
 
-                    {submitted && (
-                        <div className="py-8 text-center">
-                            <CheckCircle className="mx-auto w-16 h-16 text-green-500 mb-4" />
-                            <p className="text-xl font-semibold text-gray-800">
-                                {status === 'IN' ? 'Signed In' : 'Signed Out'} Successfully
-                            </p>
-                            <p className="text-sm text-gray-500 mt-2">
-                                This window will close automatically
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                {submitted && (
+                    <div className="py-8 text-center">
+                        <CheckCircle className="mx-auto w-16 h-16 text-green-500 mb-4" />
+                        <p className="text-xl font-semibold text-gray-800">
+                            {status === 'IN' ? 'Signed In' : 'Signed Out'} Successfully
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                            This window will close automatically
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
