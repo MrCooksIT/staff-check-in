@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
 const CheckInSystem = () => {
