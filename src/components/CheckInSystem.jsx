@@ -108,8 +108,8 @@ const CheckInSystem = () => {
                         <button
                             type="submit"
                             className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-red-600 hover:bg-red-700'
+                                ? 'bg-green-600 hover:bg-green-700'
+                                : 'bg-red-600 hover:bg-red-700'
                                 }`}
                         >
                             {`Confirm ${status}`}
