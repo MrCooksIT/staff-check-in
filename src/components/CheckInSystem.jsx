@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxu5M6xlmcuQheN2Vbx6lLPsmmWEexlZerRQHXYj-fD04oX4a2BxVbez0OxdCoqE05_/exec';
+
+
 const CheckInSystem = () => {
     const [staffId, setStaffId] = useState('');
     const [status, setStatus] = useState('');
     const [location, setLocation] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
 
     // Get status from URL parameter
     useEffect(() => {
@@ -55,6 +60,8 @@ const CheckInSystem = () => {
         }
 
         try {
+            setIsLoading(true);
+            setError('');
             const timestamp = new Date().toISOString();
             const data = {
                 staffId,
@@ -63,8 +70,14 @@ const CheckInSystem = () => {
                 location: `${location.latitude},${location.longitude}`
             };
 
-            console.log('Submitting:', data);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Send to Google Sheets
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                mode: 'no-cors'
+            });
+
+            console.log('Data sent:', data);
             setSubmitted(true);
 
             setTimeout(() => {
@@ -73,7 +86,10 @@ const CheckInSystem = () => {
             }, 2000);
 
         } catch (error) {
+            console.error('Submission error:', error);
             setError('Failed to submit. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -103,16 +119,25 @@ const CheckInSystem = () => {
                             autoFocus
                             maxLength="4"
                             required
+                            disabled={isLoading}
                         />
 
                         <button
                             type="submit"
+                            disabled={isLoading}
                             className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
-                                ? 'bg-green-600 hover:bg-green-700'
-                                : 'bg-red-600 hover:bg-red-700'
-                                }`}
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-red-600 hover:bg-red-700'
+                                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            {`Confirm ${status}`}
+                            {isLoading ? (
+                                <span className="flex items-center justify-center">
+                                    <Loader className="w-6 h-6 animate-spin mr-2" />
+                                    Submitting...
+                                </span>
+                            ) : (
+                                `Confirm ${status}`
+                            )}
                         </button>
                     </form>
                 )}
