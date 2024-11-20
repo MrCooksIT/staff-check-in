@@ -1,23 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, Calendar, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
-
+import { Users, Clock, Calendar, TrendingUp, ArrowUp, ArrowDown, Download, Filter } from 'lucide-react';
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGYhR0_Rppo2sdVDMhbyXfMMBK02rpV-yiCN3sIvjU1wU0V7_nzRko4O3ztujLQtw/exec';
 
 const AdminDashboard = () => {
-    const [data, setData] = useState(null);
+    const [data, setData] = useState({
+        presentToday: 0,
+        totalStaff: 0,
+        onTimeRate: 0,
+        departments: {},
+        recentActivity: []
+    });
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedDepartment, setSelectedDepartment] = useState('All');
+    const [dateRange, setDateRange] = useState('today');
 
     const fetchDashboardData = async () => {
         try {
             const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'getDashboard' })
+                mode: 'no-cors', // Add this
+                cache: 'no-cache',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
+                body: JSON.stringify({
+                    action: 'getDashboard',
+                    department: selectedDepartment,
+                    dateRange: dateRange
+                })
             });
-            const result = await response.json();
-            setData(result);
+            setData({
+                presentToday: 45,
+                totalStaff: 80,
+                onTimeRate: 94.2,
+                departments: {
+                    'Jnr': { present: 15, total: 20 },
+                    'Snr': { present: 12, total: 15 },
+                    'Admin': { present: 8, total: 10 },
+                    'Estate': { present: 10, total: 12 }
+                },
+                recentActivity: [
+                    {
+                        staffName: 'John Doe',
+                        department: 'Jnr',
+                        status: 'IN',
+                        time: '08:30'
+                    },
+                    // Add more sample activities
+                ]
+            });
             setLoading(false);
         } catch (err) {
+            console.error('Dashboard fetch error:', err);
             setError('Failed to load dashboard data');
             setLoading(false);
         }
