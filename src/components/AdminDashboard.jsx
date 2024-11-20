@@ -17,12 +17,11 @@ const AdminDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
+            console.log('Fetching dashboard data...');
             const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // For CORS policy
-                cache: 'no-cache',
                 headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     action: 'getDashboard',
@@ -30,27 +29,26 @@ const AdminDashboard = () => {
                     dateRange: dateRange
                 })
             });
-    
-            // Parse the response
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const responseData = await response.json();
-            
-            // Update state with real data
-            setData({
-                presentToday: responseData.presentToday,
-                totalStaff: responseData.totalStaff,
-                onTimeRate: responseData.onTimeRate,
-                departments: responseData.departments,
-                recentActivity: responseData.recentActivity
-            });
-            
+            console.log('Dashboard data:', responseData);
+
+            if (responseData.status === 'error') {
+                throw new Error(responseData.message);
+            }
+
+            setData(responseData);
             setLoading(false);
         } catch (err) {
             console.error('Dashboard fetch error:', err);
-            setError('Failed to load dashboard data');
+            setError('Failed to load dashboard data. Please try again.');
             setLoading(false);
         }
     };
-
     useEffect(() => {
         fetchDashboardData();
         const interval = setInterval(fetchDashboardData, 30000);
