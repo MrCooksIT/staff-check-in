@@ -1,115 +1,128 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, Calendar, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL';
+import {
+    Users, Clock, Calendar, TrendingUp, Download,
+    Filter, RefreshCw, ChevronDown, Printer
+} from 'lucide-react';
 
 const AdminDashboard = () => {
     const [dashboardData, setDashboardData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [selectedDepartment, setSelectedDepartment] = useState('All');
+    const [dateRange, setDateRange] = useState('today');
+    const [showExportMenu, setShowExportMenu] = useState(false);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const response = await fetch(GOOGLE_SCRIPT_URL + '?action=getDashboard');
-                const data = await response.json();
-                setDashboardData(data);
-                setLoading(false);
-            } catch (err) {
-                console.error('Error fetching dashboard data:', err);
-                setError('Failed to load dashboard data');
-                setLoading(false);
-            }
-        };
+    // Export Functions
+    const exportToExcel = async () => {
+        try {
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=exportExcel&department=${selectedDepartment}&range=${dateRange}`);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SJMC_Attendance_${new Date().toISOString().split('T')[0]}.xlsx`;
+            a.click();
+        } catch (error) {
+            console.error('Export failed:', error);
+        }
+    };
 
-        fetchDashboardData();
-        const interval = setInterval(fetchDashboardData, 30000); // Update every 30 seconds
-        return () => clearInterval(interval);
-    }, []);
-
-    if (loading) return <LoadingScreen />;
-    if (error) return <ErrorScreen error={error} />;
+    const printReport = () => {
+        window.print();
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 text-white p-6">
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <motion.header
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
-                    <h1 className="text-3xl font-bold">SJMC Staff Dashboard</h1>
-                    <p className="text-blue-200">Live Attendance Overview</p>
-                </motion.header>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <StatCard
-                        icon={<Users />}
-                        title="Present Today"
-                        value={`${dashboardData.presentToday}/${dashboardData.totalStaff}`}
-                        percentage={(dashboardData.presentToday / dashboardData.totalStaff) * 100}
-                    />
-                    <StatCard
-                        icon={<Clock />}
-                        title="On Time Rate"
-                        value={`${dashboardData.onTimeRate}%`}
-                        trend={dashboardData.onTimeRate > 90 ? 'up' : 'down'}
-                    />
-                    {/* Add more stats */}
-                </div>
-
-                {/* Department Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {Object.entries(dashboardData.departments).map(([dept, data], index) => (
-                        <motion.div
-                            key={dept}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                        >
-                            <DepartmentCard
-                                department={dept}
-                                {...data}
-                            />
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                    <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-                    <div className="space-y-4">
-                        {dashboardData.recentActivity.map((activity, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="flex items-center justify-between bg-white/5 rounded-lg p-4"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`p-2 rounded-full ${activity.action === 'IN' ? 'bg-green-500/20' : 'bg-red-500/20'
-                                        }`}>
-                                        {activity.action === 'IN' ? <ArrowUp /> : <ArrowDown />}
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">{activity.staffName}</p>
-                                        <p className="text-sm text-blue-200">{activity.department}</p>
-                                    </div>
-                                </div>
-                                <time className="text-sm text-blue-200">{activity.time}</time>
-                            </motion.div>
+            {/* Controls Bar */}
+            <div className="flex items-center justify-between mb-6 bg-white/10 rounded-lg p-4">
+                <div className="flex items-center gap-4">
+                    <select
+                        value={selectedDepartment}
+                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                        className="bg-white/20 rounded-lg px-4 py-2"
+                    >
+                        <option value="All">All Departments</option>
+                        {CONFIG.DEPARTMENTS.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
                         ))}
-                    </div>
+                    </select>
+
+                    <select
+                        value={dateRange}
+                        onChange={(e) => setDateRange(e.target.value)}
+                        className="bg-white/20 rounded-lg px-4 py-2"
+                    >
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="term">Current Term</option>
+                    </select>
+                </div>
+
+                <div className="relative">
+                    <button
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2"
+                    >
+                        <Download className="w-4 h-4" />
+                        Export
+                        <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    {showExportMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl text-gray-800 py-2">
+                            <button
+                                onClick={exportToExcel}
+                                className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-100"
+                            >
+                                <Download className="w-4 h-4" />
+                                Export to Excel
+                            </button>
+                            <button
+                                onClick={printReport}
+                                className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-100"
+                            >
+                                <Printer className="w-4 h-4" />
+                                Print Report
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Rest of your dashboard components */}
         </div>
     );
 };
 
-// Add your StatCard and DepartmentCard components here...
+// Add this to your Google Apps Script
+function exportToExcel() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.TIMESHEET);
 
-export default AdminDashboard;
+    // Create a temporary spreadsheet for the export
+    const tempSpreadsheet = SpreadsheetApp.create('Temp Export ' + new Date().toISOString());
+    const tempSheet = tempSpreadsheet.getSheets()[0];
+
+    // Copy data
+    const data = sheet.getDataRange().getValues();
+    tempSheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+
+    // Format the temp sheet
+    tempSheet.getRange(1, 1, 1, data[0].length).setFontWeight('bold');
+    tempSheet.setFrozenRows(1);
+    tempSheet.autoResizeColumns(1, data[0].length);
+
+    // Convert to Excel
+    const url = "https://docs.google.com/feeds/download/spreadsheets/Export?key=" + tempSpreadsheet.getId() + "&exportFormat=xlsx";
+
+    const token = ScriptApp.getOAuthToken();
+    const response = UrlFetchApp.fetch(url, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    });
+
+    // Clean up
+    DriveApp.getFileById(tempSpreadsheet.getId()).setTrashed(true);
+
+    return response.getBlob();
+}
