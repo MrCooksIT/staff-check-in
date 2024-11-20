@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Clock, Calendar, TrendingUp, ArrowUp, ArrowDown, Download, Filter } from 'lucide-react';
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGYhR0_Rppo2sdVDMhbyXfMMBK02rpV-yiCN3sIvjU1wU0V7_nzRko4O3ztujLQtw/exec';
-
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXX2oCwGeanOHRhQg4uLYakN-a7X5DMfvh--3X4rQtKJm8haJewHJX2YOxDh_xZgW6/exec';
 const AdminDashboard = () => {
     const [data, setData] = useState({
         presentToday: 0,
