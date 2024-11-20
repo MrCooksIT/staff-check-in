@@ -18,10 +18,11 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
         try {
             console.log('Fetching dashboard data...');
-            const response = await fetch(GOOGLE_SCRIPT_URL, {
+            await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
+                mode: 'no-cors', // Add back no-cors
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'text/plain',
                 },
                 body: JSON.stringify({
                     action: 'getDashboard',
@@ -30,16 +31,14 @@ const AdminDashboard = () => {
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            // Use a separate GET request to fetch the data
+            const dataResponse = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`, {
+                method: 'GET',
+                mode: 'cors',
+            });
 
-            const responseData = await response.json();
+            const responseData = await dataResponse.json();
             console.log('Dashboard data:', responseData);
-
-            if (responseData.status === 'error') {
-                throw new Error(responseData.message);
-            }
 
             setData(responseData);
             setLoading(false);

@@ -23,7 +23,7 @@ const preloadLocation = async () => {
         return null;
     }
 };
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5uCUdT57oqKOe32PtERdLqCk4xnjHH6SFFLXFKbl-_Rq4VsO7SQdeatwLLN8VeNH1/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHe5MhOiGEzHc0UjBnGnP4hKI2ZUWQVfHT6UUp0feC5fEf3ri_X9UlF-t8_rVGzqw-/exec';
 const SuccessModal = ({ status, onClose }) => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg p-8 max-w-sm w-full text-center">
