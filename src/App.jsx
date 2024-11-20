@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import CheckInSystem from './components/CheckInSystem';
 import QRGenerator from './components/QRGenerator';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [currentView, setCurrentView] = useState('checkin');
 
   useEffect(() => {
     const checkPath = () => {
       const path = window.location.pathname;
-      setShowAdmin(path === '/admin');
+      if (path === '/admin') {
+        setCurrentView('admin');
+      } else if (path === '/dashboard') {
+        setCurrentView('dashboard');
+      } else {
+        setCurrentView('checkin');
+      }
     };
 
     checkPath();
@@ -17,11 +24,14 @@ function App() {
     return () => window.removeEventListener('popstate', checkPath);
   }, []);
 
-  if (showAdmin) {
-    return <QRGenerator />;
+  switch (currentView) {
+    case 'admin':
+      return <QRGenerator />;
+    case 'dashboard':
+      return <AdminDashboard />;
+    default:
+      return <CheckInSystem />;
   }
-
-  return <CheckInSystem />;
 }
 
 export default App;
