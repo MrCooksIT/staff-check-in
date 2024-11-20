@@ -19,7 +19,7 @@ const AdminDashboard = () => {
         try {
             const response = await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Add this
+                mode: 'no-cors', // For CORS policy
                 cache: 'no-cache',
                 headers: {
                     'Content-Type': 'text/plain;charset=utf-8',
@@ -30,26 +30,19 @@ const AdminDashboard = () => {
                     dateRange: dateRange
                 })
             });
+    
+            // Parse the response
+            const responseData = await response.json();
+            
+            // Update state with real data
             setData({
-                presentToday: 45,
-                totalStaff: 80,
-                onTimeRate: 94.2,
-                departments: {
-                    'Jnr': { present: 15, total: 20 },
-                    'Snr': { present: 12, total: 15 },
-                    'Admin': { present: 8, total: 10 },
-                    'Estate': { present: 10, total: 12 }
-                },
-                recentActivity: [
-                    {
-                        staffName: 'John Doe',
-                        department: 'Jnr',
-                        status: 'IN',
-                        time: '08:30'
-                    },
-                    // Add more sample activities
-                ]
+                presentToday: responseData.presentToday,
+                totalStaff: responseData.totalStaff,
+                onTimeRate: responseData.onTimeRate,
+                departments: responseData.departments,
+                recentActivity: responseData.recentActivity
             });
+            
             setLoading(false);
         } catch (err) {
             console.error('Dashboard fetch error:', err);
