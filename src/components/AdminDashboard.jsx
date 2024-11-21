@@ -166,4 +166,4 @@ const QuickStatCard = ({ icon, title, value, percentage, trend, color }) => (
     </div>
 );
 
-export default StaffDashboard;
+export default AdminDashboard;
