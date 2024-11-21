@@ -1,33 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+    BarChart, Bar, LineChart, Line, XAxis, YAxis,
+    CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 import { Loader, Calendar, Users, Clock, AlertTriangle, School } from 'lucide-react';
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHe5MhOiGEzHc0UjBnGnP4hKI2ZUWQVfHT6UUp0feC5fEf3ri_X9UlF-t8_rVGzqw-/exec';
+
+const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL';
 
 const AdminDashboard = () => {
-    const [data, setData] = useState(null);
+    const [data, setData] = useState({
+        presentToday: 0,
+        totalStaff: 0,
+        onTimeRate: 0,
+        departments: {},
+        recentActivity: [],
+        weeklyTrends: []
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedDepartment, setSelectedDepartment] = useState('all');
 
-    const fetchDashboardData = async () => {
-        try {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`);
-            const result = await response.json();
-            setData(result);
-            setLoading(false);
-        } catch (err) {
-            console.error('Error fetching dashboard data:', err);
-            setError('Failed to load dashboard data');
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
         fetchDashboardData();
-        // Refresh every 5 minutes
         const interval = setInterval(fetchDashboardData, 5 * 60 * 1000);
         return () => clearInterval(interval);
     }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            // For testing, use mock data first
+            const mockData = {
+                presentToday: 45,
+                totalStaff: 52,
+                onTimeRate: 92,
+                departments: {
+                    'Jnr': { present: 15, total: 18, onTimeRate: 89 },
+                    'Snr': { present: 12, total: 15, onTimeRate: 95 },
+                    'Admin': { present: 8, total: 9, onTimeRate: 90 },
+                    'Estate': { present: 10, total: 10, onTimeRate: 100 }
+                },
+                recentActivity: [
+                    { staffName: 'Test User', department: 'Jnr', status: 'IN', time: '08:00' }
+                ],
+                weeklyTrends: [
+                    { date: 'Mon', present: 45, late: 5 },
+                    { date: 'Tue', present: 48, late: 2 },
+                    { date: 'Wed', present: 50, late: 0 }
+                ]
+            };
+
+            // Later replace with actual API call:
+            // const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`);
+            // const result = await response.json();
+
+            setData(mockData);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching dashboard data:', err);
+            setError('Failed to load dashboard data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -42,20 +77,14 @@ const AdminDashboard = () => {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center text-red-500">
-                <AlertTriangle className="w-8 h-8 mr-2" />
-                <span>{error}</span>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center text-red-500">
+                    <AlertTriangle className="w-8 h-8 mx-auto mb-4" />
+                    <p>{error}</p>
+                </div>
             </div>
         );
     }
-
-    const {
-        presentToday,
-        totalStaff,
-        onTimeRate,
-        departments,
-        recentActivity
-    } = data;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -85,65 +114,55 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <QuickStatCard
                         title="Present Today"
-                        value={`${presentToday}/${totalStaff}`}
-                        percentage={Math.round((presentToday / totalStaff) * 100)}
+                        value={`${data.presentToday}/${data.totalStaff}`}
+                        percentage={Math.round((data.presentToday / data.totalStaff) * 100)}
                         icon={<Users className="w-6 h-6" />}
                         color="bg-green-500"
                     />
                     <QuickStatCard
                         title="On Time Rate"
-                        value={`${onTimeRate}%`}
+                        value={`${data.onTimeRate}%`}
                         icon={<Clock className="w-6 h-6" />}
                         color="bg-blue-500"
                     />
-                    {/* Add more quick stats */}
+                </div>
+
+                {/* Weekly Trends */}
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <h2 className="text-xl font-semibold mb-6">Weekly Trends</h2>
+                    <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data.weeklyTrends}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                <XAxis dataKey="date" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="present" fill="#4ade80" name="Present" />
+                                <Bar dataKey="late" fill="#fbbf24" name="Late" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
 
                 {/* Department Stats */}
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <h2 className="text-xl font-semibold mb-6">Department Attendance</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.entries(departments).map(([name, stats]) => (
-                            <DepartmentCard
-                                key={name}
-                                name={name}
-                                stats={stats}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-xl shadow-lg p-6">
-                    <h2 className="text-xl font-semibold mb-6">Recent Activity</h2>
-                    <div className="space-y-4">
-                        {recentActivity.map((activity, index) => (
-                            <ActivityRow key={index} activity={activity} />
-                        ))}
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Object.entries(data.departments).map(([name, stats]) => (
+                        <DepartmentCard key={name} name={name} stats={stats} />
+                    ))}
                 </div>
             </div>
         </div>
     );
 };
 
-
-// Helper Components
-const Stat = ({ label, value }) => (
-    <div className="flex justify-between items-center">
-        <span className="text-gray-500">{label}</span>
-        <span className="font-medium">{value}</span>
-    </div>
-);
-
-const QuickStatCard = ({ icon, title, value, percentage, trend, color }) => (
+const QuickStatCard = ({ title, value, percentage, icon, color }) => (
     <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-start">
-            <div className="space-y-2">
+            <div>
                 <p className="text-gray-500">{title}</p>
-                <h3 className="text-2xl font-bold">{value}</h3>
+                <h3 className="text-2xl font-bold mt-1">{value}</h3>
                 {percentage && (
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
                         <div
                             className="bg-green-500 h-1.5 rounded-full"
                             style={{ width: `${percentage}%` }}
@@ -155,14 +174,28 @@ const QuickStatCard = ({ icon, title, value, percentage, trend, color }) => (
                 {icon}
             </div>
         </div>
-        {trend !== undefined && (
-            <div className="mt-4 flex items-center text-sm">
-                <span className={trend >= 0 ? 'text-green-500' : 'text-red-500'}>
-                    {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}
-                </span>
-                <span className="text-gray-500 ml-2">vs last week</span>
+    </div>
+);
+
+const DepartmentCard = ({ name, stats }) => (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">{name}</h3>
+        <div className="space-y-2">
+            <div className="flex justify-between">
+                <span className="text-gray-500">Present</span>
+                <span>{stats.present}/{stats.total}</span>
             </div>
-        )}
+            <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{ width: `${(stats.present / stats.total) * 100}%` }}
+                />
+            </div>
+            <div className="flex justify-between">
+                <span className="text-gray-500">On Time</span>
+                <span>{stats.onTimeRate}%</span>
+            </div>
+        </div>
     </div>
 );
 
