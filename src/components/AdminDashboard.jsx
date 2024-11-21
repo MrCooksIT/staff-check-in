@@ -27,191 +27,179 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
+            console.log('Fetching dashboard data...');
+
             const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`);
             const result = await response.json();
+            console.log('Received data:', result);
 
-            // Transform the data for the dashboard
-            setData({
-                presentToday: result.presentToday,
-                totalStaff: result.totalStaff,
-                onTimeRate: result.onTimeRate,
-                departments: result.departments || {},
-                weeklyTrends: result.weeklyTrends || [],
-                currentStatus: result.currentStatus.map(staff => ({
-                    name: staff.name,
-                    staffId: staff.staffId,
-                    department: staff.department,
-                    status: staff.status,
-                    timeIn: staff.timeIn,
-                    timeOut: staff.timeOut,
-                    isLate: staff.isLate,
-                    earlyDeparture: staff.earlyDeparture,
-                    duration: staff.duration
-                }))
-            });
+            if (result.status === 'error') {
+                throw new Error(result.message);
+            }
+
+            setData(result.data);
             setError(null);
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
-            setError('Failed to load dashboard data');
+            setError(`Failed to load dashboard data: ${err.message}`);
         } finally {
             setLoading(false);
         }
     };
-    const filteredStatusData = data.currentStatus
-        .filter(staff => {
-            if (filter === 'present') return staff.status === 'IN';
-            if (filter === 'out') return staff.status === 'OUT';
-            return true;
-        })
-        .filter(staff => {
-            if (deptFilter === 'all') return true;
-            return staff.department === deptFilter;
-        });
+};
+const filteredStatusData = data.currentStatus
+    .filter(staff => {
+        if (filter === 'present') return staff.status === 'IN';
+        if (filter === 'out') return staff.status === 'OUT';
+        return true;
+    })
+    .filter(staff => {
+        if (deptFilter === 'all') return true;
+        return staff.department === deptFilter;
+    });
 
-    // Pass the filtered data to the LiveStatusBoard
-    <LiveStatusBoard data={filteredStatusData} />
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-                    <p className="text-gray-500">Loading dashboard...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center text-red-500">
-                    <AlertTriangle className="w-8 h-8 mx-auto mb-4" />
-                    <p>{error}</p>
-                </div>
-            </div>
-        );
-    }
-
+// Pass the filtered data to the LiveStatusBoard
+<LiveStatusBoard data={filteredStatusData} />
+if (loading) {
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-blue-600 text-white">
-                <div className="container mx-auto px-6 py-8">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                            <School className="w-8 h-8" />
-                            <div>
-                                <h1 className="text-2xl font-bold">SJMC Staff Dashboard</h1>
-                                <p className="text-blue-100">Live Attendance Tracking</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={fetchDashboardData}
-                            className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-                        >
-                            Refresh Data
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="container mx-auto px-6 py-8">
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <QuickStatCard
-                        title="Present Today"
-                        value={`${data.presentToday}/${data.totalStaff}`}
-                        percentage={Math.round((data.presentToday / data.totalStaff) * 100)}
-                        icon={<Users className="w-6 h-6" />}
-                        color="bg-green-500"
-                    />
-                    <QuickStatCard
-                        title="On Time Rate"
-                        value={`${data.onTimeRate}%`}
-                        icon={<Clock className="w-6 h-6" />}
-                        color="bg-blue-500"
-                    />
-                </div>
-
-                const [filter, setFilter] = useState('all'); // 'all', 'present', 'out'
-                const [deptFilter, setDeptFilter] = useState('all');
-
-                <div className="flex gap-4 mb-4">
-                    <select
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                        className="px-3 py-2 border rounded-lg"
-                    >
-                        <option value="all">All Staff</option>
-                        <option value="present">Currently Present</option>
-                        <option value="out">Currently Out</option>
-                    </select>
-
-                    <select
-                        value={deptFilter}
-                        onChange={(e) => setDeptFilter(e.target.value)}
-                        className="px-3 py-2 border rounded-lg"
-                    >
-                        <option value="all">All Departments</option>
-                        {Object.keys(data.departments).map(dept => (
-                            <option key={dept} value={dept}>{dept}</option>
-                        ))}
-                    </select>
-                </div>
-                <LiveStatusBoard
-                    data={[
-                        {
-                            name: "John Smith",
-                            staffId: "1234",
-                            department: "Jnr",
-                            status: "IN",
-                            timeIn: "07:30",
-                            timeOut: null,
-                            isLate: false,
-                            duration: "2h 30m",
-                        },
-                        {
-                            name: "Sarah Jones",
-                            staffId: "5678",
-                            department: "Snr",
-                            status: "OUT",
-                            timeIn: "07:45",
-                            timeOut: "14:30",
-                            isLate: false,
-                            earlyDeparture: true,
-                            duration: "6h 45m",
-                        },
-                        // ... your actual staff data
-                    ]}
-                />
-                {/* Weekly Trends */}
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <h2 className="text-xl font-semibold mb-6">Weekly Trends</h2>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.weeklyTrends}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Bar dataKey="present" fill="#4ade80" name="Present" />
-                                <Bar dataKey="late" fill="#fbbf24" name="Late" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Department Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {Object.entries(data.departments).map(([name, stats]) => (
-                        <DepartmentCard key={name} name={name} stats={stats} />
-                    ))}
-                </div>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+                <Loader className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+                <p className="text-gray-500">Loading dashboard...</p>
             </div>
         </div>
     );
-};
+}
 
+if (error) {
+    return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center text-red-500">
+                <AlertTriangle className="w-8 h-8 mx-auto mb-4" />
+                <p>{error}</p>
+            </div>
+        </div>
+    );
+}
+
+return (
+    <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-blue-600 text-white">
+            <div className="container mx-auto px-6 py-8">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <School className="w-8 h-8" />
+                        <div>
+                            <h1 className="text-2xl font-bold">SJMC Staff Dashboard</h1>
+                            <p className="text-blue-100">Live Attendance Tracking</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={fetchDashboardData}
+                        className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                    >
+                        Refresh Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div className="container mx-auto px-6 py-8">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <QuickStatCard
+                    title="Present Today"
+                    value={`${data.presentToday}/${data.totalStaff}`}
+                    percentage={Math.round((data.presentToday / data.totalStaff) * 100)}
+                    icon={<Users className="w-6 h-6" />}
+                    color="bg-green-500"
+                />
+                <QuickStatCard
+                    title="On Time Rate"
+                    value={`${data.onTimeRate}%`}
+                    icon={<Clock className="w-6 h-6" />}
+                    color="bg-blue-500"
+                />
+            </div>
+
+            const [filter, setFilter] = useState('all'); // 'all', 'present', 'out'
+            const [deptFilter, setDeptFilter] = useState('all');
+
+            <div className="flex gap-4 mb-4">
+                <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="px-3 py-2 border rounded-lg"
+                >
+                    <option value="all">All Staff</option>
+                    <option value="present">Currently Present</option>
+                    <option value="out">Currently Out</option>
+                </select>
+
+                <select
+                    value={deptFilter}
+                    onChange={(e) => setDeptFilter(e.target.value)}
+                    className="px-3 py-2 border rounded-lg"
+                >
+                    <option value="all">All Departments</option>
+                    {Object.keys(data.departments).map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                </select>
+            </div>
+            <LiveStatusBoard
+                data={[
+                    {
+                        name: "John Smith",
+                        staffId: "1234",
+                        department: "Jnr",
+                        status: "IN",
+                        timeIn: "07:30",
+                        timeOut: null,
+                        isLate: false,
+                        duration: "2h 30m",
+                    },
+                    {
+                        name: "Sarah Jones",
+                        staffId: "5678",
+                        department: "Snr",
+                        status: "OUT",
+                        timeIn: "07:45",
+                        timeOut: "14:30",
+                        isLate: false,
+                        earlyDeparture: true,
+                        duration: "6h 45m",
+                    },
+                    // ... your actual staff data
+                ]}
+            />
+            {/* Weekly Trends */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 className="text-xl font-semibold mb-6">Weekly Trends</h2>
+                <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data.weeklyTrends}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="present" fill="#4ade80" name="Present" />
+                            <Bar dataKey="late" fill="#fbbf24" name="Late" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Department Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Object.entries(data.departments).map(([name, stats]) => (
+                    <DepartmentCard key={name} name={name} stats={stats} />
+                ))}
+            </div>
+        </div>
+    </div>
+);
 const QuickStatCard = ({ title, value, percentage, icon, color }) => (
     <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-start">
