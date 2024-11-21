@@ -1,11 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis,
     CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Loader, Calendar, Users, Clock, AlertTriangle, School } from 'lucide-react';
-
-const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL';
 
 const AdminDashboard = () => {
     const [data, setData] = useState({
@@ -14,47 +13,42 @@ const AdminDashboard = () => {
         onTimeRate: 0,
         departments: {},
         recentActivity: [],
-        weeklyTrends: []
+        weeklyTrends: [],
+        currentStatus: []
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedDepartment, setSelectedDepartment] = useState('all');
+    const [filter, setFilter] = useState('all'); // Add this
+    const [deptFilter, setDeptFilter] = useState('all'); // Add this
 
-    useEffect(() => {
-        fetchDashboardData();
-        const interval = setInterval(fetchDashboardData, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHe5MhOiGEzHc0UjBnGnP4hKI2ZUWQVfHT6UUp0feC5fEf3ri_X9UlF-t8_rVGzqw-/exec';
 
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
-            // For testing, use mock data first
-            const mockData = {
-                presentToday: 45,
-                totalStaff: 52,
-                onTimeRate: 92,
-                departments: {
-                    'Jnr': { present: 15, total: 18, onTimeRate: 89 },
-                    'Snr': { present: 12, total: 15, onTimeRate: 95 },
-                    'Admin': { present: 8, total: 9, onTimeRate: 90 },
-                    'Estate': { present: 10, total: 10, onTimeRate: 100 }
-                },
-                recentActivity: [
-                    { staffName: 'Test User', department: 'Jnr', status: 'IN', time: '08:00' }
-                ],
-                weeklyTrends: [
-                    { date: 'Mon', present: 45, late: 5 },
-                    { date: 'Tue', present: 48, late: 2 },
-                    { date: 'Wed', present: 50, late: 0 }
-                ]
-            };
+            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`);
+            const result = await response.json();
 
-            // Later replace with actual API call:
-            // const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`);
-            // const result = await response.json();
-
-            setData(mockData);
+            // Transform the data for the dashboard
+            setData({
+                presentToday: result.presentToday,
+                totalStaff: result.totalStaff,
+                onTimeRate: result.onTimeRate,
+                departments: result.departments || {},
+                weeklyTrends: result.weeklyTrends || [],
+                currentStatus: result.currentStatus.map(staff => ({
+                    name: staff.name,
+                    staffId: staff.staffId,
+                    department: staff.department,
+                    status: staff.status,
+                    timeIn: staff.timeIn,
+                    timeOut: staff.timeOut,
+                    isLate: staff.isLate,
+                    earlyDeparture: staff.earlyDeparture,
+                    duration: staff.duration
+                }))
+            });
             setError(null);
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
@@ -63,7 +57,19 @@ const AdminDashboard = () => {
             setLoading(false);
         }
     };
+    const filteredStatusData = data.currentStatus
+        .filter(staff => {
+            if (filter === 'present') return staff.status === 'IN';
+            if (filter === 'out') return staff.status === 'OUT';
+            return true;
+        })
+        .filter(staff => {
+            if (deptFilter === 'all') return true;
+            return staff.department === deptFilter;
+        });
 
+    // Pass the filtered data to the LiveStatusBoard
+    <LiveStatusBoard data={filteredStatusData} />
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
