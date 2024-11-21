@@ -4,30 +4,24 @@ import QRGenerator from './components/QRGenerator';
 import AdminDashboard from './components/AdminDashboard';
 
 function App() {
-  const [currentView, setCurrentView] = useState('checkin');
+  const [currentPath, setCurrentPath] = useState('');
 
   useEffect(() => {
     const checkPath = () => {
       const path = window.location.pathname;
-      if (path === '/admin') {
-        setCurrentView('admin');
-      } else if (path === '/dashboard') {
-        setCurrentView('dashboard');
-      } else {
-        setCurrentView('checkin');
-      }
+      setCurrentPath(path);
     };
 
     checkPath();
     window.addEventListener('popstate', checkPath);
-
     return () => window.removeEventListener('popstate', checkPath);
   }, []);
 
-  switch (currentView) {
-    case 'admin':
+  // Route handling
+  switch(currentPath) {
+    case '/admin':
       return <QRGenerator />;
-    case 'dashboard':
+    case '/dashboard':
       return <AdminDashboard />;
     default:
       return <CheckInSystem />;
