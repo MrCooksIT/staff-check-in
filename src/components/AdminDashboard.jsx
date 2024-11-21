@@ -127,6 +127,57 @@ const AdminDashboard = () => {
                     />
                 </div>
 
+                const [filter, setFilter] = useState('all'); // 'all', 'present', 'out'
+                const [deptFilter, setDeptFilter] = useState('all');
+
+                <div className="flex gap-4 mb-4">
+                    <select
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                        className="px-3 py-2 border rounded-lg"
+                    >
+                        <option value="all">All Staff</option>
+                        <option value="present">Currently Present</option>
+                        <option value="out">Currently Out</option>
+                    </select>
+
+                    <select
+                        value={deptFilter}
+                        onChange={(e) => setDeptFilter(e.target.value)}
+                        className="px-3 py-2 border rounded-lg"
+                    >
+                        <option value="all">All Departments</option>
+                        {Object.keys(data.departments).map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                    </select>
+                </div>
+                <LiveStatusBoard
+                    data={[
+                        {
+                            name: "John Smith",
+                            staffId: "1234",
+                            department: "Jnr",
+                            status: "IN",
+                            timeIn: "07:30",
+                            timeOut: null,
+                            isLate: false,
+                            duration: "2h 30m",
+                        },
+                        {
+                            name: "Sarah Jones",
+                            staffId: "5678",
+                            department: "Snr",
+                            status: "OUT",
+                            timeIn: "07:45",
+                            timeOut: "14:30",
+                            isLate: false,
+                            earlyDeparture: true,
+                            duration: "6h 45m",
+                        },
+                        // ... your actual staff data
+                    ]}
+                />
                 {/* Weekly Trends */}
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
                     <h2 className="text-xl font-semibold mb-6">Weekly Trends</h2>
@@ -195,6 +246,83 @@ const DepartmentCard = ({ name, stats }) => (
                 <span className="text-gray-500">On Time</span>
                 <span>{stats.onTimeRate}%</span>
             </div>
+        </div>
+    </div>
+);
+const LiveStatusBoard = ({ data }) => (
+    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Live Status Board</h2>
+            <div className="flex gap-2 text-sm">
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full">{data.filter(s => s.status === 'IN').length} Present</span>
+                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full">{data.filter(s => s.status === 'OUT').length} Out</span>
+            </div>
+        </div>
+
+        <div className="overflow-auto">
+            <table className="w-full min-w-[600px]">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th className="py-3 px-4 text-left">Staff Member</th>
+                        <th className="py-3 px-4 text-left">Department</th>
+                        <th className="py-3 px-4 text-left">Status</th>
+                        <th className="py-3 px-4 text-left">Time In</th>
+                        <th className="py-3 px-4 text-left">Time Out</th>
+                        <th className="py-3 px-4 text-left">Duration</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                    {data.map((staff, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                                <div>
+                                    <div className="font-medium">{staff.name}</div>
+                                    <div className="text-sm text-gray-500">ID: {staff.staffId}</div>
+                                </div>
+                            </td>
+                            <td className="py-3 px-4">
+                                <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+                                    {staff.department}
+                                </span>
+                            </td>
+                            <td className="py-3 px-4">
+                                <span className={`px-2 py-1 rounded-full text-sm ${staff.status === 'IN'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                    }`}>
+                                    {staff.status}
+                                </span>
+                            </td>
+                            <td className="py-3 px-4">
+                                {staff.timeIn ? (
+                                    <div>
+                                        <div className="font-medium">{staff.timeIn}</div>
+                                        <div className="text-sm text-gray-500">
+                                            {staff.isLate ?
+                                                <span className="text-amber-600">Late</span> :
+                                                <span className="text-green-600">On Time</span>
+                                            }
+                                        </div>
+                                    </div>
+                                ) : '-'}
+                            </td>
+                            <td className="py-3 px-4">
+                                {staff.timeOut ? (
+                                    <div>
+                                        <div className="font-medium">{staff.timeOut}</div>
+                                        {staff.earlyDeparture && (
+                                            <div className="text-sm text-amber-600">Early</div>
+                                        )}
+                                    </div>
+                                ) : '-'}
+                            </td>
+                            <td className="py-3 px-4">
+                                {staff.duration || '-'}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     </div>
 );
