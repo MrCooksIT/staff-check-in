@@ -1,5 +1,9 @@
 import { db } from '../config/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { format, parseISO } from 'date-fns';
+import React, { useState, useEffect } from 'react'
+import { CheckCircle, AlertCircle, Loader } from 'lucide-react'
+
 
 // Add this helper at the top of your file, outside the component
 const preloadLocation = async () => {
@@ -23,7 +27,7 @@ const preloadLocation = async () => {
         return null;
     }
 };
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHe5MhOiGEzHc0UjBnGnP4hKI2ZUWQVfHT6UUp0feC5fEf3ri_X9UlF-t8_rVGzqw-/exec';
+
 const SuccessModal = ({ status, onClose }) => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg p-8 max-w-sm w-full text-center">
@@ -110,39 +114,25 @@ const CheckInSystem = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validateStaffId(staffId)) return;
-        if (!location) {
-            setError('Location is required');
-            return;
-        }
+        if (!location || !staffId) return;
 
         try {
             setIsLoading(true);
-            setError('');
 
-            const data = {
+            await addDoc(collection(db, 'attendance'), {
                 staffId,
                 status,
-                timestamp: new Date().toISOString(),
-                location: `${location.latitude},${location.longitude}`
-            };
-
-            console.log('Sending data:', data); // Debug log
-
-            await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                cache: 'no-cache',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
-                body: JSON.stringify(data)
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('en-GB'), // 24-hour format
+                location: `${location.latitude},${location.longitude}`,
+                timestamp: Timestamp.now()
             });
 
             setShowModal(true);
+            setStaffId('');
 
         } catch (error) {
-            console.error('Submission error:', error);
+            console.error('Error:', error);
             setError('Failed to submit. Please try again.');
         } finally {
             setIsLoading(false);

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { db } from '../config/firebase';
 import { staffData } from '../utils/processStaffData';
 import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
+import { format, parseISO } from 'date-fns';
+
 
 const DatabaseInit = () => {
     const [status, setStatus] = useState('');
@@ -13,7 +15,7 @@ const DatabaseInit = () => {
             const batch = writeBatch(db);
             const staffRef = collection(db, 'staff');
             console.log('Staff Data:', staffData);
-            
+
             staffData.forEach((staff, index) => {
                 const docRef = doc(staffRef); // Let Firestore auto-generate the ID
                 batch.set(docRef, {
