@@ -1,8 +1,7 @@
-// src/components/DatabaseInit.jsx
 import React, { useState } from 'react';
 import { db } from '../config/firebase';
-import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
 import { staffData } from '../utils/processStaffData';
+import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
 
 const DatabaseInit = () => {
     const [status, setStatus] = useState('');
@@ -13,7 +12,8 @@ const DatabaseInit = () => {
             setStatus('Starting staff data initialization...');
             const batch = writeBatch(db);
             const staffRef = collection(db, 'staff');
-
+            console.log('Staff Data:', staffData);
+            
             staffData.forEach((staff, index) => {
                 const docRef = doc(staffRef); // Let Firestore auto-generate the ID
                 batch.set(docRef, {
@@ -66,8 +66,8 @@ const DatabaseInit = () => {
 
                     {status && (
                         <div className={`p-4 rounded-lg ${status.includes('Error')
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
                             }`}>
                             {status}
                         </div>

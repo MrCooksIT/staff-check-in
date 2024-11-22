@@ -7,7 +7,7 @@ import {
     Users, Database, FileText, UserPlus, Settings,
     LogOut, Home, Clock, School
 } from 'lucide-react';
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
 
 
 
@@ -59,11 +59,10 @@ const Sidebar = ({ currentPage, setCurrentPage }) => (
                 onClick={() => setCurrentPage('settings')}
             />
             <Link to="/admin/init">
-                <SidebarItem
-                    icon={<Database />}
-                    label="Initialize Database"
-                    active={currentPage === 'init'}
-                    onClick={() => setCurrentPage('init')} />
+                <SidebarItem icon={<Database />}
+                    label="Initialize Database" active={currentPage === 'init'}
+                    onClick={() => setCurrentPage('init')}
+                />
             </Link>
         </nav>
     </div>

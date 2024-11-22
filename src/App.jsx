@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import CheckInSystem from './components/CheckInSystem';
 import QRGenerator from './components/QRGenerator';
 import AdminDashboard from './components/AdminDashboard';
