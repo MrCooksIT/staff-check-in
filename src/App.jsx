@@ -29,5 +29,6 @@ function App() {
         <Route path="/dashboard" element={<AdminDashboard />} />
         {isAdmin && <Route path="/admin/init" element={<DatabaseInit />} />}
       </Routes>
-    </Router>);
+    </Router>
+    );
 } export default App;

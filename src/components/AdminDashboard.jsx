@@ -5,7 +5,6 @@ import { format, parseISO } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Users, Database, FileText, UserPlus, Settings, LogOut, Home, Clock, School } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
 
 
