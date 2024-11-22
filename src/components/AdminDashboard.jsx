@@ -6,14 +6,27 @@ import {
     onSnapshot,
     orderBy,
     where,
-    getDocs,   // Also adding getDocs since you use it
-    Timestamp  // And Timestamp
+    getDocs,
+    Timestamp
 } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Users, Database, FileText, UserPlus, Settings, LogOut, Home, Clock, School } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const refreshDashboard = () => {
+    setLoading(true); // Add loading state if you haven't already
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Re-run your existing query
+    const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('date', '>=', today)
+    );
+
+    // The onSnapshot listener will automatically update with new data
+};
 
 const SidebarItem = ({ icon, label, active, onClick }) => (
     <button
@@ -93,62 +106,98 @@ const AdminDashboard = () => {
     const [filter, setFilter] = useState('all');
     const [deptFilter, setDeptFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState('overview');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        let unsubscribe;
 
-        // Real-time attendance listener
-        const attendanceQuery = query(
-            collection(db, 'attendance'),
-            where('date', '>=', today)
-        );
-        const unsubscribe = onSnapshot(attendanceQuery, async (snapshot) => {
-            const attendanceData = [];
-            const staffPresent = new Set();
-            const onTimeStaff = new Set();
+        const setupRealtimeListener = async () => {
+            try {
+                setLoading(true);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-            // Get all staff for reference
-            const staffSnapshot = await getDocs(collection(db, 'staff'));
-            const staffMap = new Map();
-            staffSnapshot.forEach(doc => {
-                staffMap.set(doc.id, doc.data());
-            });
+                // Real-time attendance listener
+                const attendanceRef = collection(db, 'attendance');
+                const todayQuery = query(
+                    attendanceRef,
+                    where('timestamp', '>=', Timestamp.fromDate(today)),
+                    orderBy('timestamp', 'desc')
+                );
 
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const staffInfo = staffMap.get(data.staffId);
+                unsubscribe = onSnapshot(todayQuery, async (snapshot) => {
+                    const attendanceData = [];
+                    const staffPresent = new Set();
+                    const onTimeStaff = new Set();
 
-                if (staffInfo) {
-                    attendanceData.push({
-                        ...data,
-                        name: `${staffInfo.firstName} ${staffInfo.lastName}`,
-                        department: staffInfo.department
+                    // Get all staff for reference
+                    const staffSnapshot = await getDocs(collection(db, 'staff'));
+                    const staffMap = new Map();
+                    staffSnapshot.forEach(doc => {
+                        staffMap.set(doc.id, doc.data());
                     });
 
-                    if (data.status === 'IN') {
-                        staffPresent.add(data.staffId);
-                        if (!isLateArrival(data.time)) {
-                            onTimeStaff.add(data.staffId);
+                    snapshot.forEach(doc => {
+                        const record = doc.data();
+                        const staffInfo = staffMap.get(record.staffId) || {
+                            firstName: 'Unknown',
+                            lastName: 'Staff',
+                            department: 'Unassigned'
+                        };
+
+                        const processedRecord = {
+                            id: doc.id,
+                            ...record,
+                            name: `${staffInfo.firstName} ${staffInfo.lastName}`,
+                            department: staffInfo.department,
+                            isLate: isLateArrival(record.time)
+                        };
+                        attendanceData.push(processedRecord);
+
+                        if (record.status === 'IN') {
+                            staffPresent.add(record.staffId);
+                            if (!isLateArrival(record.time)) {
+                                onTimeStaff.add(record.staffId);
+                            }
                         }
-                    }
-                }
-            });
+                    });
 
-            setData(prevData => ({
-                ...prevData,
-                presentToday: staffPresent.size,
-                totalStaff: staffMap.size,
-                onTimeRate: staffPresent.size ?
-                    Math.round((onTimeStaff.size / staffPresent.size) * 100) : 0,
-                currentStatus: attendanceData,
-                departments: calculateDepartmentStats(attendanceData, staffMap)
-            }));
-        });
+                    console.log('Real-time update received:', attendanceData); // Debug log
+                    setData(prevData => ({
+                        ...prevData,
+                        presentToday: staffPresent.size,
+                        totalStaff: staffMap.size,
+                        onTimeRate: staffPresent.size ?
+                            Math.round((onTimeStaff.size / staffPresent.size) * 100) : 0,
+                        currentStatus: attendanceData,
+                        departments: calculateDepartmentStats(attendanceData, staffMap)
+                    }));
 
-        return () => unsubscribe();
+                    setLoading(false);
+                }, (error) => {
+                    console.error('Snapshot listener error:', error);
+                    setError(error.message);
+                    setLoading(false);
+                });
+
+            } catch (error) {
+                console.error('Setup error:', error);
+                setError(error.message);
+                setLoading(false);
+            }
+        };
+        setupRealtimeListener();
+        return () => unsubscribe && unsubscribe();
     }, []);
 
+    const handleRefresh = () => {
+        console.log('Manual refresh triggered');
+        // No need to manually refresh - snapshot listener will auto-update
+        // Just trigger a loading state for UI feedback
+        setLoading(true);
+        setTimeout(() => setLoading(false), 1000);
+    };
     const calculateDepartmentStats = (attendanceData, staffMap) => {
         const deptStats = {};
 
@@ -199,23 +248,40 @@ const AdminDashboard = () => {
                                 <School className="w-8 h-8" />
                                 <div>
                                     <h1 className="text-2xl font-bold">SJMC Staff Dashboard</h1>
-                                    <p className="text-blue-100">Live Attendance Tracking</p>
+                                    <p className="text-blue-100"> {loading ? 'Updating...' : 'Live Attendance Tracking'} </p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => {
-                                    const today = new Date();
-                                    today.setHours(0, 0, 0, 0);
-                                    fetchDashboardData(today);
-                                }}
-                                className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                                onClick={handleRefresh}
+                                disabled={loading}
+                                className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50"
                             >
-                                Refresh Data
+                                {loading ? (
+                                    <span className="flex items-center gap-2">
+                                        <Loader className="w-4 h-4 animate-spin" />
+                                        Updating...
+                                    </span>
+                                ) : (
+                                    'Refresh Data'
+                                )}
                             </button>
                         </div>
                     </div>
                 </div>
+                {loading && (
+                    <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50">
+                        <div className="bg-white p-4 rounded-lg shadow-lg">
+                            <Loader className="w-8 h-8 animate-spin text-blue-500" />
+                        </div>
+                    </div>
+                )}
 
+                {error && (
+                    <div className="p-4 bg-red-50 text-red-600 flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5" />
+                        <span>{error}</span>
+                    </div>
+                )}
                 <div className="container mx-auto px-6 py-8">
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
