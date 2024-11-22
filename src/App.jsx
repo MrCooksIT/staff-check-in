@@ -6,27 +6,23 @@ import DatabaseInit from './components/DatabaseInit';
 
 function App() {
   const [currentPath, setCurrentPath] = useState('');
-  { isAdmin && <Route path="/admin/init" element={<DatabaseInit />} /> }
   useEffect(() => {
     const checkPath = () => {
-      const path = window.location.pathname;
-      setCurrentPath(path);
+      const path = window.location.pathname; setCurrentPath(path);
     };
-
-    checkPath();
-    window.addEventListener('popstate', checkPath);
+    checkPath(); window.addEventListener('popstate', checkPath);
     return () => window.removeEventListener('popstate', checkPath);
   }, []);
 
-  // Route handling
-  switch (currentPath) {
-    case '/admin':
-      return <QRGenerator />;
-    case '/dashboard':
-      return <AdminDashboard />;
-    default:
-      return <CheckInSystem />;
-  }
-}
+  const isAdmin = true;
 
-export default App;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<CheckInSystem />} />
+        <Route path="/admin" element={<QRGenerator />} />
+        <Route path="/dashboard" element={<AdminDashboard />} />
+        {isAdmin && <Route path="/admin/init" element={<DatabaseInit />} />}
+      </Routes>
+    </Router>);
+} export default App;
