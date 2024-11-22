@@ -123,14 +123,21 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         let unsubscribe;
-
         const setupRealtimeListener = async () => {
             try {
                 setLoading(true);
+                // Get staff data first
+                const staffSnapshot = await getDocs(collection(db, 'staff'));
+                const staffMap = new Map();
+                staffSnapshot.forEach(doc => {
+                    staffMap.set(doc.data().staffId, { // Use staffId instead of doc.id
+                        ...doc.data()
+                    });
+                });
+
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
 
-                // Real-time attendance listener
                 const attendanceRef = collection(db, 'attendance');
                 const todayQuery = query(
                     attendanceRef,
@@ -138,26 +145,13 @@ const AdminDashboard = () => {
                     orderBy('timestamp', 'desc')
                 );
 
-                unsubscribe = onSnapshot(todayQuery, async (snapshot) => {
+                unsubscribe = onSnapshot(todayQuery, (snapshot) => {
                     const attendanceData = [];
                     const staffPresent = new Set();
                     const onTimeStaff = new Set();
 
-                    // Get all staff for reference
-                    const staffSnapshot = await getDocs(collection(db, 'staff'));
-                    console.log('Staff data:', Array.from(staffSnapshot.docs).map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    })));
-                    const staffMap = new Map();
-                    staffSnapshot.forEach(doc => {
-                        staffMap.set(doc.id, doc.data());
-                    });
-
                     snapshot.forEach(doc => {
                         const record = doc.data();
-                        console.log('Processing record:', record); // Check attendance record
-                        console.log('Staff lookup:', staffMap.get(record.staffId)); // Check staff lookup
                         const staffInfo = staffMap.get(record.staffId) || {
                             firstName: 'Unknown',
                             lastName: 'Staff',
@@ -171,6 +165,7 @@ const AdminDashboard = () => {
                             department: staffInfo.department,
                             isLate: isLateArrival(record.time)
                         };
+
                         attendanceData.push(processedRecord);
 
                         if (record.status === 'IN') {
@@ -181,7 +176,6 @@ const AdminDashboard = () => {
                         }
                     });
 
-                    console.log('Real-time update received:', attendanceData); // Debug log
                     setData(prevData => ({
                         ...prevData,
                         presentToday: staffPresent.size,
@@ -191,11 +185,6 @@ const AdminDashboard = () => {
                         currentStatus: attendanceData,
                         departments: calculateDepartmentStats(attendanceData, staffMap)
                     }));
-
-                    setLoading(false);
-                }, (error) => {
-                    console.error('Snapshot listener error:', error);
-                    setError(error.message);
                     setLoading(false);
                 });
 
@@ -205,6 +194,7 @@ const AdminDashboard = () => {
                 setLoading(false);
             }
         };
+
         setupRealtimeListener();
         return () => unsubscribe && unsubscribe();
     }, []);
