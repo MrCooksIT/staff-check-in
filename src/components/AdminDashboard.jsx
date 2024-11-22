@@ -3,13 +3,8 @@ import { db } from '../config/firebase';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import {
-    Users, Database, FileText, UserPlus, Settings,
-    LogOut, Home, Clock, School
-} from 'lucide-react';
+import { Users, Database, FileText, UserPlus, Settings, LogOut, Home, Clock, School } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-
 
 const SidebarItem = ({ icon, label, active, onClick }) => (
     <button
