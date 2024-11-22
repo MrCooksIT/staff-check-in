@@ -7,6 +7,9 @@ import {
     Users, Database, FileText, UserPlus, Settings,
     LogOut, Home, Clock, School
 } from 'lucide-react';
+import { Link } from 'react-router-dom'
+
+
 
 const SidebarItem = ({ icon, label, active, onClick }) => (
     <button
@@ -55,6 +58,13 @@ const Sidebar = ({ currentPage, setCurrentPage }) => (
                 active={currentPage === 'settings'}
                 onClick={() => setCurrentPage('settings')}
             />
+            <Link to="/admin/init">
+                <SidebarItem
+                    icon={<Database />}
+                    label="Initialize Database"
+                    active={currentPage === 'init'}
+                    onClick={() => setCurrentPage('init')} />
+            </Link>
         </nav>
     </div>
 );
@@ -90,7 +100,6 @@ const AdminDashboard = () => {
             collection(db, 'attendance'),
             where('date', '>=', today)
         );
-
         const unsubscribe = onSnapshot(attendanceQuery, async (snapshot) => {
             const attendanceData = [];
             const staffPresent = new Set();
@@ -179,15 +188,6 @@ const AdminDashboard = () => {
         <div className="flex">
             <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
             <div className="flex-1 min-h-screen bg-gray-50">
-                AC
-                yes please
-
-
-                Here's Part 3 - Main Content, Stats Cards, and Department Cards:
-
-                javascript
-
-                Copy
                 {/* Header Section */}
                 <div className="bg-blue-600 text-white">
                     <div className="container mx-auto px-6 py-8">
@@ -393,8 +393,8 @@ const LiveStatusBoard = ({ data }) => {
                                 </td>
                                 <td className="py-3 px-4">
                                     <span className={`px-2 py-1 rounded-full text-sm ${staff.status === 'IN'
-                                            ? 'bg-green-100 text-green-800'
-                                            : 'bg-red-100 text-red-800'
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-red-100 text-red-800'
                                         }`}>
                                         {staff.status}
                                     </span>
@@ -432,6 +432,7 @@ const LiveStatusBoard = ({ data }) => {
                 </table>
             </div>
         </div>
+
     );
 };
 
