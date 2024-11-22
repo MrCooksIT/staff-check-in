@@ -1,3 +1,4 @@
+//Admin Dashboard, incomplete
 import React, { useState, useEffect } from 'react';
 import { db } from '../config/firebase';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';

@@ -3,20 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-
-    }
-  },
   build: {
-    outDir: 'dist',
-    rollupOptions: {
-      external: ['react-router-dom', 'date-fns'],
-      output: {
-        globals: {
-          'date-fns': 'dateFns'
-        }
-      }
-    }
+    outDir: 'dist'
+  },
+  server: {
+    historyApiFallback: true
   }
 });

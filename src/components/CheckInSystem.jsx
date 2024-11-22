@@ -1,3 +1,4 @@
+//Checkin System (after qr scan)
 import { db } from '../config/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import React, { useState, useEffect } from 'react'
