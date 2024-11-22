@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes } from "./node_modules/react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import CheckInSystem from './components/CheckInSystem';
 import QRGenerator from './components/QRGenerator';
 import AdminDashboard from './components/AdminDashboard';
 import DatabaseInit from './components/DatabaseInit';
-
 
 function App() {
   const [currentPath, setCurrentPath] = useState('');
@@ -15,7 +14,8 @@ function App() {
       setCurrentPath(path);
     };
 
-    checkPath(); window.addEventListener('popstate', checkPath);
+    checkPath();
+    window.addEventListener('popstate', checkPath);
     return () => window.removeEventListener('popstate', checkPath);
   }, []);
 
