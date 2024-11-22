@@ -1,8 +1,7 @@
-//Checkin System (after qr scan)
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { doc, collection, addDoc, serverTimestamp, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import React, { useState, useEffect } from 'react'
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react'
 
 const preloadLocation = async () => {
     if (!navigator.geolocation) return null;
@@ -38,8 +37,7 @@ const SuccessModal = ({ status, onClose }) => (
             </p>
             <button
                 onClick={onClose}
-                className={`px-6 py-2 rounded-lg text-white ${status === 'IN' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
-                    }`}
+                className={`px-6 py-2 rounded-lg text-white ${status === 'IN' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
             >
                 Close
             </button>
@@ -55,8 +53,28 @@ const CheckInSystem = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
+    // Verify Firebase connection
     useEffect(() => {
-        let isSubscribed = true; // For cleanup
+        const verifyConnection = async () => {
+            try {
+                const testDoc = await addDoc(collection(db, 'test'), {
+                    test: true,
+                    timestamp: Timestamp.now()
+                });
+                console.log('Firebase connection verified:', testDoc.id);
+                await deleteDoc(doc(db, 'test', testDoc.id));
+            } catch (error) {
+                console.error('Firebase connection error:', error);
+                setError('System unavailable. Please try again later.');
+            }
+        };
+
+        verifyConnection();
+    }, []);
+
+    // Initialize status and location
+    useEffect(() => {
+        let isSubscribed = true;
 
         const initialize = async () => {
             try {
@@ -83,7 +101,6 @@ const CheckInSystem = () => {
                     setLocation(locationData);
                     setError(''); // Clear any existing errors
                 }
-
             } catch (error) {
                 if (isSubscribed) {
                     setError(error.message);
@@ -91,10 +108,8 @@ const CheckInSystem = () => {
             }
         };
 
-        // Start initialization
         initialize();
 
-        // Cleanup function
         return () => {
             isSubscribed = false;
         };
@@ -112,30 +127,42 @@ const CheckInSystem = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!location || !staffId) return;
+        if (!validateStaffId(staffId) || !location) {
+            setError('Please ensure you have a valid staff ID and location');
+            return;
+        }
 
         try {
             setIsLoading(true);
+            setError('');
 
-            await addDoc(collection(db, 'attendance'), {
+            const now = new Date();
+            const checkInData = {
                 staffId,
                 status,
-                date: new Date().toISOString().split('T')[0],
-                time: new Date().toLocaleTimeString('en-GB'), // 24-hour format
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString('en-GB'),
                 location: `${location.latitude},${location.longitude}`,
-                timestamp: Timestamp.now()
-            });
+                timestamp: Timestamp.now(),
+                clientTimestamp: now.toISOString()
+            };
+
+            console.log('Sending data to Firebase:', checkInData);
+
+            const docRef = await addDoc(collection(db, 'attendance'), checkInData);
+            console.log('Document written with ID:', docRef.id);
 
             setShowModal(true);
             setStaffId('');
 
         } catch (error) {
-            console.error('Error:', error);
-            setError('Failed to submit. Please try again.');
+            console.error('Submission error:', error);
+            setError(`Failed to submit: ${error.message}`);
         } finally {
             setIsLoading(false);
         }
     };
+
     const handleModalClose = () => {
         window.close();
         // Fallback if window.close() is blocked
@@ -155,8 +182,7 @@ const CheckInSystem = () => {
 
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-            <div className={`w-full max-w-md rounded-lg shadow-lg p-6 ${status === 'IN' ? 'bg-green-50' : 'bg-red-50'
-                }`}>
+            <div className={`w-full max-w-md rounded-lg shadow-lg p-6 ${status === 'IN' ? 'bg-green-50' : 'bg-red-50'}`}>
                 {error && (
                     <div className="mb-4 p-3 bg-white/50 text-red-600 rounded-lg flex items-center gap-2">
                         <AlertCircle className="w-5 h-5" />
@@ -187,9 +213,7 @@ const CheckInSystem = () => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN'
-                            ? 'bg-green-600 hover:bg-green-700'
-                            : 'bg-red-600 hover:bg-red-700'
+                        className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {isLoading ? (
