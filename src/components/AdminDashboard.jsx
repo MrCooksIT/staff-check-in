@@ -199,6 +199,66 @@ const AdminDashboard = () => {
         return () => unsubscribe && unsubscribe();
     }, []);
 
+    const processAttendanceData = (attendanceData, staffMap) => {
+        // Group by staff ID to get latest status
+        const latestStatus = new Map();
+
+        attendanceData.forEach(record => {
+            const existing = latestStatus.get(record.staffId);
+            if (!existing || record.timestamp > existing.timestamp) {
+                latestStatus.set(record.staffId, record);
+            }
+        });
+
+        // Calculate location validity
+        const SCHOOL_LOCATION = {
+            lat: -33.958937,
+            lng: 18.475184,
+            radius: 100 // meters
+        };
+
+        const calculateDistance = (lat1, lng1, lat2, lng2) => {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c;
+        };
+
+        return Array.from(latestStatus.values()).map(record => {
+            const staffInfo = staffMap.get(record.staffId);
+            const [lat, lng] = record.location.split(',').map(Number);
+            const distance = calculateDistance(
+                lat, lng,
+                SCHOOL_LOCATION.lat,
+                SCHOOL_LOCATION.lng
+            );
+            const isAtSchool = distance <= SCHOOL_LOCATION.radius;
+
+            return {
+                id: record.id,
+                staffId: record.staffId,
+                name: staffInfo ? `${staffInfo.firstName} ${staffInfo.lastName}` : 'Unknown Staff',
+                department: staffInfo?.department || 'Unassigned',
+                status: record.status,
+                timeIn: record.status === 'IN' ? record.time : '',
+                timeOut: record.status === 'OUT' ? record.time : '',
+                isLate: record.status === 'IN' && isLateArrival(record.time),
+                isEarlyDeparture: record.status === 'OUT' && isEarlyDeparture(record.time),
+                location: isAtSchool ? 'At School' : 'Off Campus',
+                distance: Math.round(distance),
+                timestamp: record.timestamp
+            };
+        }).sort((a, b) => b.timestamp - a.timestamp);
+    };
+
     const handleRefresh = () => {
         console.log('Manual refresh triggered');
         // No need to manually refresh - snapshot listener will auto-update
@@ -206,44 +266,56 @@ const AdminDashboard = () => {
         setLoading(true);
         setTimeout(() => setLoading(false), 1000);
     };
-    const calculateDepartmentStats = (attendanceData, staffMap) => {
+    function calculateDepartmentStats(attendanceData, staffMap) {
         const deptStats = {};
 
         // Initialize department counts
-        for (const staffMember of staffMap.values()) {
-            if (!deptStats[staffMember.department]) {
-                deptStats[staffMember.department] = {
+        for (const [_, staffInfo] of staffMap) {
+            const dept = staffInfo.department;
+            if (!deptStats[dept]) {
+                deptStats[dept] = {
                     total: 0,
                     present: 0,
-                    onTime: 0
+                    onTime: 0,
+                    earlyDepartures: 0,
+                    avgHours: 0
                 };
             }
-            deptStats[staffMember.department].total++;
+            deptStats[dept].total++;
         }
 
-        // Calculate present and on-time staff
+        // Process attendance records
         attendanceData.forEach(record => {
+            const dept = record.department;
+            if (!deptStats[dept]) return;
+
             if (record.status === 'IN') {
-                const dept = record.department;
-                if (deptStats[dept]) {
-                    deptStats[dept].present++;
-                    if (!isLateArrival(record.time)) {
-                        deptStats[dept].onTime++;
-                    }
+                deptStats[dept].present++;
+                if (!record.isLate) {
+                    deptStats[dept].onTime++;
                 }
+            } else if (record.status === 'OUT' && isEarlyDeparture(record.time)) {
+                deptStats[dept].earlyDepartures++;
             }
         });
 
-        // Calculate rates
+        // Calculate rates and averages
         Object.keys(deptStats).forEach(dept => {
             const stats = deptStats[dept];
+            stats.attendanceRate = stats.present ?
+                Math.round((stats.present / stats.total) * 100) : 0;
             stats.onTimeRate = stats.present ?
                 Math.round((stats.onTime / stats.present) * 100) : 0;
         });
 
         return deptStats;
-    };
+    }
 
+    function isEarlyDeparture(time) {
+        if (!time) return false;
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours < 14 || (hours === 14 && minutes < 30); // Before 14:30
+    }
     return (
         <div className="flex">
             <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
@@ -418,32 +490,26 @@ const DepartmentCard = ({ name, stats }) => (
 
 // LiveStatusBoard Component
 const LiveStatusBoard = ({ data }) => {
-    const calculateDuration = (timeIn, timeOut) => {
-        if (!timeIn || !timeOut) return '-';
-        const start = new Date(`2000/01/01 ${timeIn}`);
-        const end = new Date(`2000/01/01 ${timeOut}`);
-        const diff = (end - start) / (1000 * 60); // minutes
-        const hours = Math.floor(diff / 60);
-        const minutes = Math.round(diff % 60);
-        return `${hours}h ${minutes}m`;
-    };
+    const latestStatuses = processAttendanceData(data);
+    const presentCount = latestStatuses.filter(s => s.status === 'IN').length;
+    const outCount = latestStatuses.filter(s => s.status === 'OUT').length;
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Live Status Board</h2>
-                <div className="flex gap-2 text-sm">
+                <div className="flex gap-2">
                     <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full">
-                        {data.filter(s => s.status === 'IN').length} Present
+                        {presentCount} Present
                     </span>
                     <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full">
-                        {data.filter(s => s.status === 'OUT').length} Out
+                        {outCount} Out
                     </span>
                 </div>
             </div>
 
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px]">
+                <table className="w-full min-w-[800px]">
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="py-3 px-4 text-left">Staff Member</th>
@@ -451,12 +517,13 @@ const LiveStatusBoard = ({ data }) => {
                             <th className="py-3 px-4 text-left">Status</th>
                             <th className="py-3 px-4 text-left">Time In</th>
                             <th className="py-3 px-4 text-left">Time Out</th>
-                            <th className="py-3 px-4 text-left">Duration</th>
+                            <th className="py-3 px-4 text-left">Location</th>
+                            <th className="py-3 px-4 text-left">Notes</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {data.map((staff, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
+                        {latestStatuses.map((staff) => (
+                            <tr key={staff.staffId} className="hover:bg-gray-50">
                                 <td className="py-3 px-4">
                                     <div>
                                         <div className="font-medium">{staff.name}</div>
@@ -470,38 +537,42 @@ const LiveStatusBoard = ({ data }) => {
                                 </td>
                                 <td className="py-3 px-4">
                                     <span className={`px-2 py-1 rounded-full text-sm ${staff.status === 'IN'
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-red-100 text-red-800'
                                         }`}>
                                         {staff.status}
                                     </span>
                                 </td>
                                 <td className="py-3 px-4">
-                                    {staff.timeIn ? (
+                                    {staff.timeIn && (
                                         <div>
                                             <div className="font-medium">{staff.timeIn}</div>
-                                            <div className="text-sm text-gray-500">
-                                                {isLateArrival(staff.timeIn) ? (
-                                                    <span className="text-amber-600">Late</span>
-                                                ) : (
-                                                    <span className="text-green-600">On Time</span>
-                                                )}
-                                            </div>
+                                            {staff.isLate && (
+                                                <div className="text-sm text-amber-600">Late</div>
+                                            )}
                                         </div>
-                                    ) : '-'}
+                                    )}
                                 </td>
                                 <td className="py-3 px-4">
-                                    {staff.timeOut ? (
+                                    {staff.timeOut && (
                                         <div>
                                             <div className="font-medium">{staff.timeOut}</div>
-                                            {staff.earlyDeparture && (
+                                            {staff.isEarlyDeparture && (
                                                 <div className="text-sm text-amber-600">Early</div>
                                             )}
                                         </div>
-                                    ) : '-'}
+                                    )}
                                 </td>
                                 <td className="py-3 px-4">
-                                    {calculateDuration(staff.timeIn, staff.timeOut)}
+                                    <span className={`px-2 py-1 rounded-full text-sm ${staff.location === 'At School'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-amber-100 text-amber-800'
+                                        }`}>
+                                        {staff.location}
+                                    </span>
+                                </td>
+                                <td className="py-3 px-4 text-sm text-gray-500">
+                                    {staff.distance}m from campus
                                 </td>
                             </tr>
                         ))}
@@ -509,7 +580,6 @@ const LiveStatusBoard = ({ data }) => {
                 </table>
             </div>
         </div>
-
     );
 };
 
