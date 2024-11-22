@@ -1,10 +1,51 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../config/firebase';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { format } from 'date-fns';
 import {
-    BarChart, Bar, LineChart, Line, XAxis, YAxis,
-    CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
-import { Loader, Calendar, Users, Clock, AlertTriangle, School } from 'lucide-react';
-
+    Users, Database, FileText, UserPlus, Settings,
+    LogOut, Home, Clock
+} from 'lucide-react';
+const Sidebar = ({ currentPage, setCurrentPage }) => (
+    <div className="w-64 bg-white h-screen shadow-lg">
+      <div className="p-4 border-b">
+        <h1 className="text-xl font-bold">SJMC Admin</h1>
+      </div>
+      <nav className="p-4">
+        <SidebarItem
+          icon={<Home />}
+          label="Overview"
+          active={currentPage === 'overview'}
+          onClick={() => setCurrentPage('overview')}
+        />
+        <SidebarItem
+          icon={<Users />}
+          label="Staff Management"
+          active={currentPage === 'staff'}
+          onClick={() => setCurrentPage('staff')}
+        />
+        <SidebarItem
+          icon={<Clock />}
+          label="Attendance"
+          active={currentPage === 'attendance'}
+          onClick={() => setCurrentPage('attendance')}
+        />
+        <SidebarItem
+          icon={<FileText />}
+          label="Reports"
+          active={currentPage === 'reports'}
+          onClick={() => setCurrentPage('reports')}
+        />
+        <SidebarItem
+          icon={<Settings />}
+          label="Settings"
+          active={currentPage === 'settings'}
+          onClick={() => setCurrentPage('settings')}
+        />
+      </nav>
+    </div>
+  );
+  
 const AdminDashboard = () => {
     const [data, setData] = useState({
         presentToday: 0,
@@ -15,72 +56,87 @@ const AdminDashboard = () => {
         weeklyTrends: [],
         currentStatus: []
     });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [filter, setFilter] = useState('all');
-    const [deptFilter, setDeptFilter] = useState('all');
-
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHe5MhOiGEzHc0UjBnGnP4hKI2ZUWQVfHT6UUp0feC5fEf3ri_X9UlF-t8_rVGzqw-/exec';
-
     useEffect(() => {
-        fetchDashboardData();
-        const interval = setInterval(fetchDashboardData, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-    const fetchDashboardData = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getDashboard`);
-            const result = await response.json();
+        // Real-time attendance listener
+        const attendanceQuery = query(
+            collection(db, 'attendance'),
+            where('date', '>=', today)
+        );
 
-            if (result.status === 'error') {
-                throw new Error(result.message);
-            }
+        const unsubscribe = onSnapshot(attendanceQuery, async (snapshot) => {
+            const attendanceData = [];
+            const staffPresent = new Set();
+            const onTimeStaff = new Set();
 
-            setData(result.data);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching dashboard data:', err);
-            setError(`Failed to load dashboard data: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+            // Get all staff for reference
+            const staffSnapshot = await getDocs(collection(db, 'staff'));
+            const staffMap = new Map();
+            staffSnapshot.forEach(doc => {
+                staffMap.set(doc.id, doc.data());
+            });
 
-    const filteredStatusData = data.currentStatus
-        .filter(staff => {
-            if (filter === 'present') return staff.status === 'IN';
-            if (filter === 'out') return staff.status === 'OUT';
-            return true;
-        })
-        .filter(staff => {
-            if (deptFilter === 'all') return true;
-            return staff.department === deptFilter;
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const staffInfo = staffMap.get(data.staffId);
+
+                if (staffInfo) {
+                    attendanceData.push({
+                        ...data,
+                        name: `${staffInfo.firstName} ${staffInfo.lastName}`,
+                        department: staffInfo.department
+                    });
+
+                    if (data.status === 'IN') {
+                        staffPresent.add(data.staffId);
+                        if (!isLateArrival(data.time)) {
+                            onTimeStaff.add(data.staffId);
+                        }
+                    }
+                }
+            });
+
+            setData({
+                presentToday: staffPresent.size,
+                totalStaff: staffMap.size,
+                onTimeRate: staffPresent.size ?
+                    Math.round((onTimeStaff.size / staffPresent.size) * 100) : 0,
+                currentStatus: attendanceData,
+                departments: calculateDepartmentStats(attendanceData, staffMap)
+            });
         });
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-                    <p className="text-gray-500">Loading dashboard...</p>
-                </div>
-            </div>
-        );
-    }
+        return () => unsubscribe();
+    }, []);
+    const calculateDepartmentStats = (attendanceData, staffMap) => {
+        const deptStats = {};
 
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center text-red-500">
-                    <AlertTriangle className="w-8 h-8 mx-auto mb-4" />
-                    <p>{error}</p>
-                </div>
-            </div>
-        );
-    }
+        // Initialize department counts
+        for (const staffMember of staffMap.values()) {
+            if (!deptStats[staffMember.department]) {
+                deptStats[staffMember.department] = {
+                    total: 0,
+                    present: 0,
+                    onTime: 0
+                };
+            }
+            deptStats[staffMember.department].total++;
+        }
 
+        // Calculate present and on-time staff
+        attendanceData.forEach(record => {
+            if (record.status === 'IN') {
+                deptStats[record.department].present++;
+                if (!isLateArrival(record.time)) {
+                    deptStats[record.department].onTime++;
+                }
+            }
+        });
+
+        return deptStats;
+    };
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}

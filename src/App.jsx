@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import CheckInSystem from './components/CheckInSystem';
 import QRGenerator from './components/QRGenerator';
 import AdminDashboard from './components/AdminDashboard';
+import DatabaseInit from './components/DatabaseInit';
 
 function App() {
   const [currentPath, setCurrentPath] = useState('');
-
+  { isAdmin && <Route path="/admin/init" element={<DatabaseInit />} /> }
   useEffect(() => {
     const checkPath = () => {
       const path = window.location.pathname;
@@ -18,7 +19,7 @@ function App() {
   }, []);
 
   // Route handling
-  switch(currentPath) {
+  switch (currentPath) {
     case '/admin':
       return <QRGenerator />;
     case '/dashboard':

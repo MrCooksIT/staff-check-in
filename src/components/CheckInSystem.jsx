@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { db } from '../config/firebase';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 
 // Add this helper at the top of your file, outside the component
 const preloadLocation = async () => {
