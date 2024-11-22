@@ -6,8 +6,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
-      external: ['react-router-dom'],
-      external: ['date-fns'],
+      external: ['react-router-dom', 'date-fns'],
       output: {
         globals: {
           'date-fns': 'dateFns'
