@@ -3,6 +3,8 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import React, { useState, useEffect } from 'react'
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+
 
 
 // Add this helper at the top of your file, outside the component
