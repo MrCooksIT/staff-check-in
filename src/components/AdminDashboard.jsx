@@ -145,6 +145,10 @@ const AdminDashboard = () => {
 
                     // Get all staff for reference
                     const staffSnapshot = await getDocs(collection(db, 'staff'));
+                    console.log('Staff data:', Array.from(staffSnapshot.docs).map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    })));
                     const staffMap = new Map();
                     staffSnapshot.forEach(doc => {
                         staffMap.set(doc.id, doc.data());
@@ -152,6 +156,8 @@ const AdminDashboard = () => {
 
                     snapshot.forEach(doc => {
                         const record = doc.data();
+                        console.log('Processing record:', record); // Check attendance record
+                        console.log('Staff lookup:', staffMap.get(record.staffId)); // Check staff lookup
                         const staffInfo = staffMap.get(record.staffId) || {
                             firstName: 'Unknown',
                             lastName: 'Staff',
