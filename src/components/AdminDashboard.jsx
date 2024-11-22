@@ -1,41 +1,19 @@
-//Admin Dashboard, incomplete
 import React, { useState, useEffect } from 'react';
 import { db } from '../config/firebase';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore'
+import {
+    collection,
+    query,
+    onSnapshot,
+    orderBy,
+    where,
+    getDocs,   // Also adding getDocs since you use it
+    Timestamp  // And Timestamp
+} from 'firebase/firestore';
 import { format, parseISO } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Users, Database, FileText, UserPlus, Settings, LogOut, Home, Clock, School } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-
-function Dashboard() {
-    const [checkIns, setCheckIns] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // Create query for today's check-ins
-        const today = new Date().toLocaleDateString('en-ZA');
-        const checkInsRef = collection(db, 'checkIns');
-        const q = query(checkInsRef, orderBy('timestamp', 'desc'));
-
-        // Set up real-time listener
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const checkInData = [];
-            snapshot.forEach((doc) => {
-                checkInData.push({ id: doc.id, ...doc.data() });
-            });
-            setCheckIns(checkInData);
-            setLoading(false);
-            console.log('Received real-time update:', checkInData); // Debug log
-        }, (error) => {
-            console.error('Error fetching check-ins:', error);
-            setLoading(false);
-        });
-
-        // Cleanup subscription
-        return () => unsubscribe();
-    }, []);
-}
 
 const SidebarItem = ({ icon, label, active, onClick }) => (
     <button
