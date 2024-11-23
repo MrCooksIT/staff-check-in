@@ -8,6 +8,11 @@ import AdminDashboard from './components/AdminDashboard';
 import DatabaseInit from './components/DatabaseInit';
 import Login from './components/Login';
 import AdminSetup from './components/AdminSetup';
+import StaffManagement from './components/pages/StaffManagement';
+import Attendance from './components/pages/Attendance';
+import Reports from './components/pages/Reports';
+import Settings from './components/pages/Settings';
+
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
@@ -26,6 +31,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<QRGenerator />} />
           <Route path="/admin/setup" element={<AdminSetup />} />
+          <Route path="staff" element={<StaffManagement />} />
+          <Route path="attendance" element={<Attendance />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="settings" element={<Settings />} />
           <Route
             path="/dashboard"
             element={
@@ -46,5 +55,5 @@ function App() {
       </Router>
     </AuthProvider>
   );
-} 
+}
 export default App;

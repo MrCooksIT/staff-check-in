@@ -24,18 +24,7 @@ const preloadLocation = async () => {
         return null;
     }
 };
-const refreshDashboard = () => {
-    setLoading(true); // Add loading state if you haven't already
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
-    // Re-run your existing query
-    const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('date', '>=', today)
-    );
-
-};
 const SuccessModal = ({ status, onClose }) => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-lg p-8 max-w-sm w-full text-center">
@@ -224,8 +213,9 @@ const CheckInSystem = () => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${status === 'IN' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`w-full p-6 text-2xl font-semibold text-white rounded-lg transition-colors ${
+                            status === 'IN' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {isLoading ? (
                             <span className="flex items-center justify-center">
