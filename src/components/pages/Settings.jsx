@@ -66,11 +66,11 @@ const Settings = () => {
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
     const [collapsedSections, setCollapsedSections] = useState({
-        departments: false,
-        notifications: false,
-        attendance: false,
-        security: false,
-        customization: false
+        departments: true,
+        notifications: true,
+        attendance: true,
+        security: true,
+        customization: true
     });
     const toggleSection = (section) => {
         setCollapsedSections(prev => ({
@@ -227,8 +227,6 @@ const Settings = () => {
                 </button>
                 {!collapsedSections.departments && (
                     <div className="p-4 border-t space-y-8">
-
-
                         <h2 className="text-xl font-semibold mb-4">Department Hours</h2>
                         <div className="space-y-8">
                             {Object.entries(settings.departments).map(([dept, times]) => (
