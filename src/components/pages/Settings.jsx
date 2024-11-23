@@ -13,7 +13,7 @@ import {
     Ruler,
     AlertCircle,
     Settings as SettingsIcon,
-    Clock  // Add this import
+    Clock 
 } from 'lucide-react';;
 
 
