@@ -10,11 +10,11 @@ module.exports = {
       // We can add your school colors here
       colors: {
         primary: {
-          DEFAULT: '#1a73e8', // You can change this to your school's primary color
+          DEFAULT: '#1a73e8', // primary color
           foreground: '#ffffff',
         },
         secondary: {
-          DEFAULT: '#ea4335', // You can change this to your school's secondary color
+          DEFAULT: '#ea4335', //  secondary color
           foreground: '#ffffff',
         },
       },

@@ -1,12 +1,12 @@
 import { Home, Users, Clock, FileText, Settings, Database } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { QrCode } from 'lucide-react';
 
 const SidebarItem = ({ icon, label, active, onClick }) => (
     <button
         onClick={onClick}
-        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            active ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
-        }`}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${active ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
+            }`}
     >
         {icon}
         <span>{label}</span>
@@ -44,19 +44,18 @@ export const Sidebar = ({ currentPage, setCurrentPage }) => (
                 onClick={() => setCurrentPage('reports')}
             />
             <SidebarItem
+                icon={<QrCode />}
+                label="QR Codes"
+                active={currentPage === 'qrcodes'}
+                onClick={() => setCurrentPage('qrcodes')}
+            />
+            <SidebarItem
                 icon={<Settings />}
                 label="Settings"
                 active={currentPage === 'settings'}
                 onClick={() => setCurrentPage('settings')}
             />
-            <Link to="/admin/init">
-                <SidebarItem 
-                    icon={<Database />}
-                    label="Initialize Database" 
-                    active={currentPage === 'init'}
-                    onClick={() => setCurrentPage('init')}
-                />
-            </Link>
+
         </nav>
     </div>
 );

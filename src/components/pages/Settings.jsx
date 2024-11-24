@@ -1,22 +1,20 @@
-// src/components/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { db } from '../../config/firebase';
 import { collection, doc, updateDoc, getDocs, setDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
     Loader,
     Save,
     ChevronDown,
     ChevronRight,
-    Moon,
     Bell,
     Shield,
-    Ruler,
-    AlertCircle,
+    Paintbrush,
+    Archive,
     Settings as SettingsIcon,
-    Clock 
+    Clock
 } from 'lucide-react';;
-
-
+const functions = getFunctions()
 const defaultSettings = {
     notifications: {
         emailAlerts: false,
@@ -47,20 +45,54 @@ const defaultSettings = {
         secondaryColor: '#ea4335',
         schoolName: 'SJMC',
         timezone: 'Africa/Johannesburg'
+    },
+    archive: {
+        selectedYear: new Date().getFullYear(),
+        exportToSheets: true,
+        history: []
+    }
+};
+const handleArchive = async () => {
+    if (!window.confirm(`Are you sure you want to archive records from ${settings.archive.selectedYear}?`)) {
+        return;
+    }
+
+    try {
+        setSaving(true);
+
+        // Call Firebase Function
+        const archiveRecords = httpsCallable(functions, 'archiveRecords');
+        const result = await archiveRecords({
+            year: settings.archive.selectedYear
+        });
+
+        // Update archive history
+        const newHistory = [{
+            date: new Date().toLocaleDateString(),
+            year: settings.archive.selectedYear,
+            recordCount: result.data.count,
+            status: 'Completed'
+        }, ...settings.archive.history];
+
+        handleSettingChange('archive.history', newHistory);
+
+        setMessage(`Archive complete: ${result.data.message}`);
+    } catch (error) {
+        setError('Archive process failed: ' + error.message);
+    } finally {
+        setSaving(false);
     }
 };
 
-
 const Settings = () => {
     const [settings, setSettings] = useState(defaultSettings);
-    const handleDarkModeChange = (checked) => {
-        handleSettingChange('customization.darkMode', checked);
-        if (checked) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+    const handleDarkMode = () => {
+        document.documentElement.classList.toggle('dark');
+        localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
     };
+    const [isDarkMode, setIsDarkMode] = useState(
+        document.documentElement.classList.contains('dark')
+    );
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -70,7 +102,8 @@ const Settings = () => {
         notifications: true,
         attendance: true,
         security: true,
-        customization: true
+        customization: true,
+        archive: true
     });
     const toggleSection = (section) => {
         setCollapsedSections(prev => ({
@@ -78,7 +111,6 @@ const Settings = () => {
             [section]: !prev[section]
         }));
     };
-    const [darkMode, setDarkMode] = useState(false);
     const handleSettingChange = (path, value) => {
         setSettings(prev => {
             const newSettings = { ...prev };
@@ -119,13 +151,17 @@ const Settings = () => {
 
     useEffect(() => {
         fetchSettings();
-        const isDark = settings?.customization?.darkMode;
-        if (isDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [settings?.customization?.darkMode]);
+        const darkModeObserver = new MutationObserver(() => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        });
+
+        darkModeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        return () => darkModeObserver.disconnect();
+    }, []);
 
 
     const fetchSettings = async () => {
@@ -220,7 +256,7 @@ const Settings = () => {
                     className="w-full p-4 flex items-center justify-between hover:bg-gray-50"
                 >
                     <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-blue-500" />
+                        <Clock className="w-5 h-5" />
                         <h2 className="text-xl font-semibold">Department Hours</h2>
                     </div>
                     {collapsedSections.departments ? <ChevronRight /> : <ChevronDown />}
@@ -352,45 +388,153 @@ const Settings = () => {
                     </div>
                 )}
             </div>
-            {/* Customization */}
-            <div className="p-6 dark:bg-gray-900">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                    <div className="bg-white rounded-lg shadow">
-                        <button
-                            onClick={() => toggleSection('customization')}
-                            className="w-full p-4 flex items-center justify-between hover:bg-gray-50"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Moon className="w-5 h-5" />
-                                <h2 className="text-xl font-semibold">Appearance</h2>
-                            </div>
-                            {collapsedSections.customization ? <ChevronRight /> : <ChevronDown />}
-                        </button>
+            {/* Archive Settings */}
+            <div className="bg-white rounded-lg shadow">
+                <button
+                    onClick={() => toggleSection('archive')}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50"
+                >
+                    <div className="flex items-center gap-2">
+                        <Archive className="w-5 h-5" />
+                        <h2 className="text-xl font-semibold">Archive Management</h2>
+                    </div>
+                    {collapsedSections.archive ? <ChevronRight /> : <ChevronDown />}
+                </button>
 
-                        {!collapsedSections.customization && (
-                            <div className="p-4 border-t">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <span className="font-medium">Dark Mode</span>
-                                        <p className="text-sm text-gray-500">Enable dark theme for the dashboard</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={settings.customization.darkMode}
-                                            onChange={(e) => handleDarkModeChange(e.target.checked)}
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
+                {!collapsedSections.archive && (
+                    <div className="p-4 border-t space-y-6">
+                        {/* Year Selection and Archive Trigger */}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Archive Records for Year
+                                </label>
+                                <div className="flex gap-4">
+                                    <select
+                                        className="px-3 py-2 border rounded-lg flex-grow"
+                                        value={settings.archive?.selectedYear || new Date().getFullYear()}
+                                        onChange={e => handleSettingChange('archive.selectedYear', e.target.value)}
+                                    >
+                                        {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => handleArchive()}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                                    >
+                                        <Archive className="w-4 h-4" />
+                                        Archive Year
+                                    </button>
                                 </div>
                             </div>
-                        )}
+                        </div>
+
+                        {/* Export Options */}
+                        <div className="space-y-4">
+                            <h3 className="font-medium">Export Options</h3>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <span className="font-medium">Export to Google Sheets</span>
+                                    <p className="text-sm text-gray-500">Automatically export archived data to Google Sheets</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={settings.archive?.exportToSheets || false}
+                                        onChange={e => handleSettingChange('archive.exportToSheets', e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Archive History */}
+                        <div className="space-y-4">
+                            <h3 className="font-medium">Archive History</h3>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="text-left">
+                                            <th className="pb-2">Date</th>
+                                            <th className="pb-2">Year</th>
+                                            <th className="pb-2">Records</th>
+                                            <th className="pb-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {settings.archive?.history?.map((record, index) => (
+                                            <tr key={index}>
+                                                <td className="py-2">{record.date}</td>
+                                                <td className="py-2">{record.year}</td>
+                                                <td className="py-2">{record.recordCount}</td>
+                                                <td className="py-2">
+                                                    <span className="px-2 py-1 text-sm rounded-full bg-green-100 text-green-800">
+                                                        {record.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
+            </div>
+            {/* Customization */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <button
+                    onClick={() => toggleSection('customization')}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                    <div className="flex items-center gap-2">
+                        <Paintbrush className="w-5 h-5" />
+                        <h2 className="text-xl font-semibold dark:text-white">Appearance</h2>
+                    </div>
+                    {collapsedSections.customization ? <ChevronRight /> : <ChevronDown />}
+                </button>
+
+                {!collapsedSections.customization && (
+                    <div className="p-4 border-t dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="font-medium dark:text-white">Dark Mode</span>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Enable dark mode
+                                </p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isDarkMode}
+                                    onChange={() => {
+                                        document.documentElement.classList.toggle('dark');
+                                        localStorage.setItem(
+                                            'darkMode',
+                                            document.documentElement.classList.contains('dark')
+                                        );
+                                    }}
+                                    className="sr-only peer"
+                                />
+
+                                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer 
+                        peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800
+                        peer-checked:after:translate-x-full peer-checked:after:border-white 
+                        after:content-[''] after:absolute after:top-0.5 after:left-[2px] 
+                        after:bg-white after:border-gray-300 after:border after:rounded-full 
+                        after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                </div>
+                                <span className="ml-3 text-gray-600 dark:text-gray-300">
+                                    {document.documentElement.classList.contains('dark') ? 'On' : 'Off'}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
-
     );
 };
 

@@ -30,11 +30,12 @@ import { DepartmentCard } from './dashboard/DepartmentCard';
 import { LiveStatusBoard } from './dashboard/LiveStatusBoard';
 import { Sidebar } from './dashboard/Sidebar';
 import { isLateArrival, isEarlyDeparture } from '../utils/time';
-import { isAtSchool } from '../utils/location';
+import { isWithinSchoolRadius } from '../utils/location';
 import StaffManagement from './pages/StaffManagement';
 import Attendance from './pages/Attendance';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import QRGenerator from './pages/QRGenerator';
 const refreshDashboard = () => {
     setLoading(true); // Add loading state if you haven't already
     const today = new Date();
@@ -76,6 +77,8 @@ const AdminDashboard = () => {
                 return <Reports />;
             case 'settings':
                 return <Settings />;
+            case 'qrcodes':
+                return <QRGenerator />;
             case 'overview':
             default:
                 return (
@@ -262,7 +265,7 @@ const AdminDashboard = () => {
                 SCHOOL_LOCATION.lat,
                 SCHOOL_LOCATION.lng
             );
-            const isAtSchool = distance <= SCHOOL_LOCATION.radius;
+            const isWithinSchoolRadius = distance <= SCHOOL_LOCATION.radius;
 
             return {
                 id: record.id,
@@ -274,7 +277,7 @@ const AdminDashboard = () => {
                 timeOut: record.status === 'OUT' ? record.time : '',
                 isLate: record.status === 'IN' && isLateArrival(record.time),
                 isEarlyDeparture: record.status === 'OUT' && isEarlyDeparture(record.time),
-                location: isAtSchool ? 'At School' : 'Off Campus',
+                location: isWithinSchoolRadius ? 'At School' : 'Off Campus',
                 distance: Math.round(distance),
                 timestamp: record.timestamp
             };

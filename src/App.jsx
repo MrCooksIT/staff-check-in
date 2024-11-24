@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import CheckInSystem from './components/CheckInSystem';
-import QRGenerator from './components/QRGenerator';
+import QRGenerator from './components/pages/QRGenerator';
 import AdminDashboard from './components/AdminDashboard';
 import DatabaseInit from './components/DatabaseInit';
 import Login from './components/Login';
@@ -23,13 +23,17 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 function App() {
+  const isDark = localStorage.getItem('darkMode') === 'true';
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  }
+
   return (
     <AuthProvider>
       <Router>
         <Routes>
           <Route path="/" element={<CheckInSystem />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<QRGenerator />} />
           <Route path="/admin/setup" element={<AdminSetup />} />
           <Route path="staff" element={<StaffManagement />} />
           <Route path="attendance" element={<Attendance />} />
